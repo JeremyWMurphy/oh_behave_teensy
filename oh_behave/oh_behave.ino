@@ -7,10 +7,10 @@ const uint Fs = 5000; // sampling rate
 
 // channels
 const uint wheelChan = 14;
-const uint frameChan = 0; // frame counter channel
-const uint lickChan = 1;  //lick channel
-const uint trigChan1 = 2; // trigger channel;
-const uint valveChan1 = 3;
+const uint frameChan = 23; // frame counter channel
+const uint lickChan = 22;  //lick channel
+const uint trigChan1 = 1; // trigger channel;
+const uint valveChan1 = 2;
 
 volatile uint16_t wheelVal = 0;
 volatile int lickVal = 0;
@@ -18,18 +18,18 @@ volatile int lickVal = 0;
 // state stuff
 volatile uint State = 0;
 volatile bool noGo = false;
-volatile bool stateStart = false;
 volatile uint32_t startT = 0;
-volatile bool stimEnd = false;
-volatile bool rewStart = false;
-volatile bool rewEnd = false;
 volatile uint32_t rewT = 0;
+volatile bool stimEnd = false;
+volatile bool rewEnd = false;
+volatile bool rewStart = true;
+volatile bool stateStart = true;
 volatile uint trialOutcome = 0;
 
 // time lengths
 const uint trigLen = 500; // in samples
 const uint rewLen = 10000; // how long from stim start is a response considered valid, samples
-const uint valveLen = 2500; // how long to open reward valve in samples
+const uint valveLen = 5000; // how long to open reward valve in samples
 
 // waveform parameters to be set over serial for each of the 4 DAC channels
 volatile uint waveType[4] = {1,1,1,1}; // wave types: 0 = whale, 1 = square
@@ -59,7 +59,6 @@ const uint waveMax = 4095; // it's a 12bit dac, so this will always be the max v
 const byte numChars = 255;
 volatile char receivedChars[numChars];
 volatile bool newData = false;
-const uint nVarIn = 7;
 volatile char msgCode;
 
 // Counters
@@ -93,6 +92,8 @@ void setup() {
   Wire.setClock(1000000); // holy fucking shit, this must be set after mcp.begin or else it doesn't work
 
   attachInterrupt(frameChan, frameCounter, RISING);
+  pinMode(valveChan1, OUTPUT);
+  digitalWrite(valveChan1, LOW);
  
   t1.begin(ohBehave, 1E6/Fs);
 
@@ -111,38 +112,34 @@ void ohBehave(){
     State = 0;
 
   } else if (State == 2){ // GO
-    goNoGo(true);
+    goNoGo();
     
   } else if (State == 3){ // NO-GO  
-    goNoGo(false);
+    goNoGo();
   
   } else if (State == 4){ // send triggers
     fireTrig();
   
   }  
 
-  dataReport();
+  if (loopCount % 5000 == 0){
+    dataReport();
+  }
   recvSerial();
   parseData();
   loopCount++;
 
 }
 
-void goNoGo(bool go){
+void goNoGo(){
 
   if (stateStart){
     startT = loopCount;
     stateStart = false;
   }
 
-  if (go){
-    waveWrite();
-    rewardResponse();
-
-  } else {
-    waveWrite();
-    rewardResponse();
-  }
+  waveWrite();
+  rewardResponse();
 
   if (stimEnd & rewEnd){
     // reset stim trackers
@@ -153,6 +150,52 @@ void goNoGo(bool go){
     stimEnd = false;
     rewEnd = false;
     State = 0;
+    stateStart = true;
+  }
+
+}
+
+void rewardResponse(){
+
+  if ((State == 2) && (lickVal == HIGH)){ // HIT
+    dispenseReward();
+    Serial.println("HIT");
+    trialOutcome = 1;
+
+  } else if ((State == 2) && (lickVal == LOW)){ // MISS
+    trialOutcome = 2;
+    Serial.println("MISS");
+
+  } else if ((State == 3) && (lickVal == LOW)){ // CW
+    trialOutcome = 3;
+
+  } else if ((State == 3) && (lickVal == HIGH)){ // FA
+    trialOutcome = 4;
+
+  }
+
+  if (loopCount - startT > rewLen){
+    rewEnd = true;
+    //reset variables
+    rewStart = true;
+    trialOutcome = 0;
+  }
+
+}
+
+void dispenseReward(){
+
+  if (rewStart){
+    rewT = loopCount;
+    rewStart = false;
+  }
+
+  if (loopCount - rewT > valveLen){ 
+    digitalWrite(valveChan1,LOW);
+
+  }else {
+    digitalWrite(valveChan1,HIGH);
+    Serial.println("Rewarding");
   }
 
 }
@@ -253,30 +296,6 @@ void waveWrite(){
   }
 }
 
-void rewardResponse(){
-
-  if ((State == 2) && (lickVal == HIGH)){ // HIT
-    dispenseReward();
-    trialOutcome = 1;
-
-  } else if ((State == 2) && (lickVal == LOW)){ // MISS
-    trialOutcome = 2;
-
-  } else if ((State == 3) && (lickVal == LOW)){ // CW
-    trialOutcome = 3;
-
-  } else if ((State == 3) && (lickVal == HIGH)){ // FA
-    trialOutcome = 4;
-
-  }
-
-  if (loopCount - stateStart > rewLen){
-    trialOutcome = 0;
-    rewEnd = true;
-  }
-
-}
-
 void fireTrig(){
 
   if (stateStart){
@@ -295,24 +314,7 @@ void fireTrig(){
 
 }
 
-void dispenseReward(){
-
-  if (rewStart){
-    rewT = loopCount;
-    rewStart = false;
-  }
-
-  if (loopCount - rewT > valveLen){ 
-    digitalWrite(valveChan1,LOW);
-    rewEnd = true;
-
-  }else {
-    digitalWrite(valveChan1,HIGH);
-  }
-
-}
-
-void dataReport (){
+void dataReport(){
 
     wheelVal = analogRead(wheelChan);
     lickVal = digitalRead(lickChan);
@@ -321,23 +323,24 @@ void dataReport (){
     Serial.print(loopCount);
     Serial.print(",");
     Serial.print(frameCount);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(State);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(trialOutcome);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(curVal[0]);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(curVal[1]);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(curVal[2]);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(curVal[3]);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(lickVal);
-    Serial.println(",");
+    Serial.print(",");
     Serial.print(wheelVal);
     Serial.print(">");
+    Serial.println("");
 
 }
 

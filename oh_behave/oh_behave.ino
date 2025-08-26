@@ -5,10 +5,21 @@
 
 const uint Fs = 5000; // sampling rate
 
+// time lengths
+const uint trigLen = 500; // in samples
+const uint respLen = 10000; // how long from stim start is a response considered valid, samples
+const uint valveLen = 10000; // how long to open reward valve in samples
+const uint rewWaitLen = 10000; // how long to wait from stim onset to deliver reward, only used if rewWait = true
+
+// session parameters to set
+const bool rewWait = true;
+
 // channels
-const uint wheelChan = 14;
-const uint frameChan = 23; // frame counter channel
-const uint lickChan = 22;  //lick channel
+// ins
+const uint wheelChan = 14; // analog
+const uint frameChan = 23; // frame counter channel, interrupt
+const uint lickChan = 22;  //lick channel, di
+// outs
 const uint trigChan1 = 1; // trigger channel;
 const uint valveChan1 = 2;
 
@@ -17,21 +28,28 @@ volatile int lickVal = 0;
 
 // state stuff
 volatile uint State = 0;
-volatile bool noGo = false;
-volatile uint32_t startT = 0;
-volatile uint32_t rewT = 0;
+
+volatile bool stimStart = true;
 volatile bool stimEnd = false;
-volatile bool rewEnd = false;
-volatile bool rewStart = true;
-volatile bool stateStart = true;
+volatile uint32_t stimT = 0;
+
+volatile bool respStart = true;
+volatile bool respEnd = false;
+volatile uint32_t respT = 0;
+
+volatile bool dispStart = true;
+volatile bool dispEnd = false;
+volatile uint32_t dispT = 0;
+volatile bool waitForDisp = false;
+
+volatile bool trigStart = true;
+volatile bool trigEnd = false;
+volatile uint32_t trigT = 0;
+
 volatile uint trialOutcome = 0;
 
-// time lengths
-const uint trigLen = 500; // in samples
-const uint rewLen = 10000; // how long from stim start is a response considered valid, samples
-const uint valveLen = 5000; // how long to open reward valve in samples
-
 // waveform parameters to be set over serial for each of the 4 DAC channels
+
 volatile uint waveType[4] = {1,1,1,1}; // wave types: 0 = whale, 1 = square
 volatile uint waveDur[4] = {0,0,0,0}; // duration of pulse, fixed for whale right now, set via serial in ms, converted to sample points
 volatile uint waveAmp[4] = {0,0,0,0}; // max voltage amplitude, in 12bit - 0-4095 
@@ -40,7 +58,6 @@ volatile uint waveReps[4] = {0,0,0,0}; // number of times to repeat wave pulse a
 volatile uint rampStep[4] = {0,0,0,0}; // specific to ramping variables, still in development
 volatile uint whaleStep[4] = {0,0,0,0}; // specific to ramping variables, still in development
 volatile uint waveBase[4] = {0,0,0,0}; // baseline prior to stimulus onset, in ms, allows for offsets between the stimuli, set via serial in ms, converted to sample points
-
 // waveform tracking
 volatile uint wavIncrmntr[4] = {0,0,0,0}; // for keeping track of where we are in a given stimulus presentation
 volatile uint repCntr[4] = {0,0,0,0}; // for keeping track of pulse repitions
@@ -65,7 +82,7 @@ volatile char msgCode;
 volatile uint32_t loopCount = 0;
 volatile uint32_t frameCount = 0;
 
-// 
+// objs
 Adafruit_MCP4728 mcp;
 IntervalTimer t1;
 
@@ -73,13 +90,13 @@ void setup() {
 
   analogReadResolution(10);
 
-  Serial.begin(9600); // baud rate here doesn't matter for teensy
+  Serial.begin(9600); // baud rate here doesn't matter for teensy (?)
   Serial.println("Connected");
 
   Wire.begin();
   
-  // Try to initialize
-  if (!mcp.begin(0x60)) { // this could be 0x60 or 0x64
+  // Try to initialize DAC
+  if (!mcp.begin(0x60)) { // Be careful, this could be 0x60 or 0x64
     Serial.println("Failed to find MCP4728 chip"); 
   } else{
     Serial.println("Found MCP4728 chip");
@@ -91,10 +108,18 @@ void setup() {
   
   Wire.setClock(1000000); // holy fucking shit, this must be set after mcp.begin or else it doesn't work
 
+  // setup io
   attachInterrupt(frameChan, frameCounter, RISING);
+  
   pinMode(valveChan1, OUTPUT);
   digitalWrite(valveChan1, LOW);
- 
+
+  pinMode(trigChan1, OUTPUT);
+  digitalWrite(trigChan1, LOW);
+
+  pinMode(lickChan, INPUT_PULLDOWN);
+
+  // start main interrupt timer program at specified sample rate
   t1.begin(ohBehave, 1E6/Fs);
 
 }
@@ -107,15 +132,25 @@ void ohBehave(){
   if (State == 0){ // do nothing state
  
   } else if (State == 1){ // reset 
+    // this should only be called for one loop of ohBehave before reverting to state 0
     loopCount = 0;
     frameCount = 0;
+    // flip the valve a couple times, nice audio feedback that things are up and running
+    digitalWrite(valveChan1, HIGH);
+    delay(500);
+    digitalWrite(valveChan1, LOW);
+    delay(500);
+    digitalWrite(valveChan1, HIGH);
+    delay(500);
+    digitalWrite(valveChan1, LOW);
+    digitalWrite(trigChan1, LOW);
     State = 0;
 
   } else if (State == 2){ // GO
-    goNoGo();
+    go();
     
   } else if (State == 3){ // NO-GO  
-    goNoGo();
+    noGo();
   
   } else if (State == 4){ // send triggers
     fireTrig();
@@ -131,67 +166,103 @@ void ohBehave(){
 
 }
 
-void goNoGo(){
+void go(){
 
-  if (stateStart){
-    startT = loopCount;
-    stateStart = false;
+  if (stimStart){
+    stimT = loopCount;
+    stimStart = false;
   }
 
-  waveWrite();
-  rewardResponse();
+  waveWrite(); // present stim 
 
-  if (stimEnd & rewEnd){
-    // reset stim trackers
-    for (int i = 0; i< 4; i++){
-    stimOn[i] = true;
-    inBase[i] = true;
+  if (respStart){
+    respT = loopCount;
+    respStart = false;
+  }
+
+  if (trialOutcome != 1){
+    
+    if (lickVal == HIGH){ // check for licks, if any, then HIT, now we no longer enter into here
+      dispenseReward();
+      Serial.println("HIT");
+      trialOutcome = 1;
+
+    } else if (lickVal == LOW){ // otherwise it stays as a MISS
+      trialOutcome = 2;
+      Serial.println("MISS");
     }
-    stimEnd = false;
-    rewEnd = false;
-    State = 0;
-    stateStart = true;
+
+  }
+
+  // check if response period is over
+  if (loopCount - respT > respLen){
+    respEnd = true;
+  }
+
+  if (((stimEnd & respEnd) & !waitForDisp) || (stimEnd & respEnd & dispEnd)){ // we exit the state only if both stimulus, response window and reward are all over
+    resetTrackers();
   }
 
 }
 
-void rewardResponse(){
+void noGo(){
 
-  if ((State == 2) && (lickVal == HIGH)){ // HIT
-    dispenseReward();
-    Serial.println("HIT");
-    trialOutcome = 1;
-
-  } else if ((State == 2) && (lickVal == LOW)){ // MISS
-    trialOutcome = 2;
-    Serial.println("MISS");
-
-  } else if ((State == 3) && (lickVal == LOW)){ // CW
-    trialOutcome = 3;
-
-  } else if ((State == 3) && (lickVal == HIGH)){ // FA
-    trialOutcome = 4;
-
+  if (stimStart){
+    stimT = loopCount;
+    stimStart = false;
   }
 
-  if (loopCount - startT > rewLen){
-    rewEnd = true;
-    //reset variables
-    rewStart = true;
-    trialOutcome = 0;
+  waveWrite(); // present stim 
+
+  if (respStart){
+    respT = loopCount;
+    respStart = false;
+  }
+
+  if (trialOutcome != 3){
+    
+    if (lickVal == HIGH){ // FA
+      // to-do: time-out or error cure
+      Serial.println("FA");
+      trialOutcome = 3;
+
+    } else if (lickVal == LOW){ // CW
+      Serial.println("CW");
+      trialOutcome = 4;
+
+    }
+  }
+
+  // check if response period is over
+  if (loopCount - respT > respLen){
+    respEnd = true;
+  }
+
+  if (((stimEnd & respEnd) & !waitForDisp) || (stimEnd & respEnd & dispEnd)){ // we exit the state only if both stimulus, response window and reward are all over
+    resetTrackers();
   }
 
 }
 
 void dispenseReward(){
 
-  if (rewStart){
-    rewT = loopCount;
-    rewStart = false;
+  if (rewWait){ // whether or not ot wait a fixed duration from the stim onset to deliver reward
+    if (dispStart && loopCount - stimT > rewWaitLen){
+      dispT = loopCount;
+      dispStart = false;
+      waitForDisp = true;
+    }
+  } else {
+    if (dispStart){
+      dispT = loopCount;
+      dispStart = false;
+      waitForDisp = true;
+    }
   }
 
-  if (loopCount - rewT > valveLen){ 
+  if (loopCount - dispT > valveLen){ 
     digitalWrite(valveChan1,LOW);
+    dispEnd = true;
 
   }else {
     digitalWrite(valveChan1,HIGH);
@@ -298,14 +369,14 @@ void waveWrite(){
 
 void fireTrig(){
 
-  if (stateStart){
-    startT = loopCount;
-    stateStart = false;
+  if (trigStart){
+    trigT = loopCount;
+    trigStart = false;
   }
      
-  if (loopCount - startT > trigLen) {
+  if (loopCount - trigT > trigLen) {
     digitalWrite(trigChan1,LOW);
-    stateStart = true;
+    trigStart = true;
     State = 0;
 
   } else { 
@@ -475,6 +546,22 @@ void parseData() { // split the data into its parts
     newData = false;
 
   }
+}
+
+void resetTrackers(){
+    // reset trackers
+    for (int i = 0; i< 4; i++){
+    stimOn[i] = true;
+    inBase[i] = true;
+    }
+    stimEnd = false;
+    respEnd = false;
+    dispEnd = false;
+    respStart = true;
+    dispStart = true;
+    stimStart = true;
+    waitForDisp = false;
+    State = 0;
 }
 
 int linspace(float const n, float const d1, float const d2, int const i){

@@ -97,10 +97,13 @@ for i = 1:n_trials
         is_go = true;        
         cur_amp = sig_amps_12bit(trial_type);
         msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' num2str(cur_amp) ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
+        ax.Title.String = ['Trial ' num2str(i) ', Go, Amp = ' num2str(cur_amp)];  
     else
         is_go = false;
         msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',0,' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
+        ax.Title.String = ['Trial ' num2str(i) ', NoGo, Amp = 0'];
     end
+
 
     write_serial(s,msg_out);
     

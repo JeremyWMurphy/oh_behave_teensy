@@ -23,12 +23,21 @@ if ~isempty(data)
         f.UserData.State = data(st,3);
     end
 
+    if f.UserData.State < 4
+        f.Children.Children(8).Children.Children(3:6).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(8).Children.Children(f.UserData.State+3).FontColor = [0 1 1];
+    end
+
     ot = find(data(:,4) ~= 0,1,'first'); 
     if ~isempty(ot)
         f.UserData.trialOutcome = data(ot,4);
     end
-        
 
+    if f.UserData.Outcome > 0
+        f.Children.Children(8).Children.Children(7:10).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(8).Children.Children(f.UserData.Outcome+6).FontColor = [0 1 1];
+    end
+     
     drawnow
 
 end

@@ -131,6 +131,8 @@ void ohBehave(){
  
   } else if (State == 1){ // reset 
     // this should only be called for one loop of ohBehave before reverting to state 0
+    digitalWrite(valveChan1, LOW);
+    digitalWrite(trigChan1, LOW);
     loopCount = 0;
     frameCount = 0;
     State = 0;
@@ -145,6 +147,11 @@ void ohBehave(){
   } else if (State == 4){ // send triggers
     fireTrig();
   
+  } else if (State == 5){ // open valve1
+    digitalWrite(valveChan1, HIGH);
+  
+  } else if (State == 6){ // close valve1
+    digitalWrite(valveChan1, LOW);
   }  
 
   if (loopCount % dataReportThrottle == 0){

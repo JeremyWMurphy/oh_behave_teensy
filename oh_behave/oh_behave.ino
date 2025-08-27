@@ -76,7 +76,7 @@ const byte numChars = 255;
 volatile char receivedChars[numChars];
 volatile bool newData = false;
 volatile char msgCode;
-const uint dataReportThrottle = 1; // factor to slow serial reporting down rela
+const uint dataReportThrottle = 5; // factor to slow serial reporting down rela
 
 // Counters
 volatile uint32_t loopCount = 0;
@@ -134,6 +134,7 @@ void ohBehave(){
     loopCount = 0;
     frameCount = 0;
     State = 0;
+    delay(1000);
 
   } else if (State == 2){ // GO
     goNoGo();

@@ -63,13 +63,14 @@ ax.Color = [0 0 0];
 ax.XColor = [1 1 1];
 ax.YColor = [1 1 1];
 ax.XLabel.String = 'SECS';
-ax.YLim = [0 5];
+ax.YLim = [0 8];
+ax.XLim = [1 fs*n_sec_disp];
 ax.Title.Color = [1 1 1];
 ax.Title.FontSize = 18;
 ax.Title.FontWeight = 'normal';
 ax.Title.String = 'Waiting to start';
 
-ax.YTick = [1 2 3 4];
+ax.YTick = [1 3 5 7];
 ax.YTickLabel = {'Piezo','Wheel','Frame1','Licks'};
 nan_vec = nan(fs*n_sec_disp,1);
 
@@ -176,7 +177,7 @@ state_txt.Layout.Row = 5;
 state_txt.Layout.Column = 2;
 state_txt.FontSize = 18;
 
-fontname(fig,'Courier')
+fontname(fig,'Arial')
 
 end
 

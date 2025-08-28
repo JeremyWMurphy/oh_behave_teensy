@@ -6,9 +6,9 @@
 const uint Fs = 5000; // sampling rate
 
 // time lengths
-const uint trigLen = 500; // in samples
-const uint respLen = 10000; // how long from stim start is a response considered valid, samples
-const uint valveLen = 10000; // how long to open reward valve in samples
+const uint trigLen = Fs/2; // trigger lenght in seconds
+const uint respLen = Fs*2; // how long from stim start is a response considered valid,
+const uint valveLen = Fs*1; // how long to open reward valve in samples
 
 // channels
 // ins
@@ -46,6 +46,10 @@ volatile bool trigEnd = false;
 volatile uint32_t trigT = 0;
 
 volatile uint trialOutcome = 0;
+const uint HIT = 1;
+const uint MISS = 2;
+const uint CW = 3;
+const uint FA = 4;
 
 // waveform parameters to be set over serial for each of the 4 DAC channels
 
@@ -76,7 +80,8 @@ const byte numChars = 255;
 volatile char receivedChars[numChars];
 volatile bool newData = false;
 volatile char msgCode;
-const uint dataReportThrottle = 5; // factor to slow serial reporting down rela
+const uint dataReportThrottle = 1; // factor to slow down serial reporting 
+volatile uint data[8] = {0,0,0,0,0,0,0,0};
 
 // Counters
 volatile uint32_t loopCount = 0;
@@ -154,10 +159,7 @@ void ohBehave(){
     digitalWrite(valveChan1, LOW);
   }  
 
-  if (loopCount % dataReportThrottle == 0){
-    dataReport();
-  }
-
+  dataReport();
   pollData();
   recvSerial();
   parseData();
@@ -188,9 +190,9 @@ void goNoGo(){
 
   if (!respEnd){ 
     if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT, now we no longer enter into here
-      trialOutcome = 1;
+      trialOutcome = HIT;
     } else if ((State == 3) && (lickVal == HIGH)){ // FA
-      trialOutcome = 3;
+      trialOutcome = FA;
     }
   }
 
@@ -203,23 +205,15 @@ void goNoGo(){
       if (trialOutcome == 0){
 
         if (State == 2){
-          Serial.println("MISS");
-          trialOutcome = 2;
+          trialOutcome = MISS;
 
         } else if (State == 3){
-          Serial.println("CW");
-          trialOutcome = 4;
+          trialOutcome = CW;
         }
-
-      } else if (trialOutcome == 1){
-        Serial.println("HIT");
-      } else if (trialOutcome == 3){
-        Serial.println("FA");
       }
-
     }
 
-    if (loopCount - dispT > valveLen){ 
+    if (loopCount - dispT > valveLen){  // end of reward dispens, reset things
         
         digitalWrite(valveChan1,LOW);
         
@@ -235,7 +229,7 @@ void goNoGo(){
         trialOutcome = 0;
         State = 0;
       
-    } else if (trialOutcome == 1) {
+    } else if (trialOutcome == HIT) {
       digitalWrite(valveChan1,HIGH);
 
     } else {
@@ -372,27 +366,36 @@ void pollData(){
 }
 
 void dataReport(){
- 
+
+    uint redundant = 1;
+
+    if (loopCount % redundant == 0){
+      data[0] = loopCount;
+      data[1] = frameCount;
+      data[2] = State;
+      data[3] = trialOutcome;
+      data[4] = curVal[0];
+      data[5] = curVal[1];
+      data[6] = lickVal;
+      data[7] = wheelVal;
+    }
+
     Serial.print("<");
-    Serial.print(loopCount);
+    Serial.print(data[0]);
     Serial.print(",");
-    Serial.print(frameCount);
+    Serial.print(data[1]);
     Serial.print(",");
-    Serial.print(State);
+    Serial.print(data[2]);
     Serial.print(",");
-    Serial.print(trialOutcome);
+    Serial.print(data[3]);
     Serial.print(",");
-    Serial.print(curVal[0]);
+    Serial.print(data[4]);
     Serial.print(",");
-    Serial.print(curVal[1]);
+    Serial.print(data[5]);
     Serial.print(",");
-    Serial.print(curVal[2]);
+    Serial.print(data[6]);    
     Serial.print(",");
-    Serial.print(curVal[3]);
-    Serial.print(",");
-    Serial.print(lickVal);
-    Serial.print(",");
-    Serial.print(wheelVal);
+    Serial.print(data[7]);  
     Serial.print(">");
     Serial.println("");
 
@@ -471,11 +474,13 @@ void parseData() { // split the data into its parts
       waveDur[chanSelect] = (volatile uint) round((waveParams[2]/1000.0) * Fs);
 
       if ((waveType[chanSelect] == 0) & (waveDur[chanSelect] < SamplesNum)){
-        Serial.println("The requested duration is too short for the whalestim, setting to minimum of 20 ms");
+        Serial.println("The requested duration is too short for the whalestim, setting to minimum");
         waveDur[chanSelect] = SamplesNum;
-      } else if ((waveType[chanSelect] == 0) & (waveDur[chanSelect] % 100 != 0)){
-        Serial.println("The requested duration for the whalestim must be divisible by 20, shifting duration up to next multiple of 20.");
-        waveDur[chanSelect] = waveDur[chanSelect] + (waveDur[chanSelect] % 100);
+      } else if ((waveType[chanSelect] == 0) & (waveDur[chanSelect] % SamplesNum != 0)){
+        Serial.println("The requested duration for the whalestim must be a multiple of ");
+        Serial.print(SamplesNum);
+        Serial.print(" Sample Points. Changing to next multiple above the requested duration");
+        waveDur[chanSelect] = waveDur[chanSelect] + (waveDur[chanSelect] % SamplesNum);
       }
 
       // set amplitude

@@ -1,7 +1,7 @@
 function [] = oh_behave()
 
 % parameters
-teensy_fs = 5e3;
+teensy_fs = 5000;
 
 % experiment parameters
 baseln = 5; % length of pause at begining of experiment
@@ -33,24 +33,24 @@ teensy_trigger =    '<S,4>';
 % teensy waveform stimulus parameters
 chan = '0';
 pulse_type = '0';
-pulse_len = '25'; % ms
+pulse_len = '20'; % ms
 pulse_amp = '0';
-pulse_intrvl = '25';
+pulse_intrvl = '0';
 pulse_reps = '3';
 pulse_base = '0';
 msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
-serial_port = 'COM3';
-up_every = 4096;
-n_sec_disp = 5;
+serial_port = 'COM4';
+up_every = 5000; % number of bytes to read in at a time
+n_sec_disp = 10;
 
 %cam_fs = 10; % camera frame rate
 %frame_duty_cycle = 0.2; % fraction of camera pulse high
 
 %% live data figure
 f = make_ui_figure(msg_out,teensy_fs,n_sec_disp);
-f.UserData = struct('trialOutcome','State');
+f.UserData = struct('trialOutcome',0,'State',0,'lastFrame',NaN,'data',[]);
 
 gl = get(f,'Children');
 
@@ -75,6 +75,7 @@ fprintf(data_fid,'%s\n',id);
 
 %% serial comms w/ teensy
 s = serialport(serial_port,115200);
+
 pause(1);
 s.configureCallback('byte',up_every, @(src,evt) plotSaveDataAvailable(src, evt, data_fid_stream, ax, up_every,f));
 s.flush;
@@ -90,7 +91,6 @@ pause(baseln);
 for i = 1:n_trials
 
     tic
-    fprintf(['\nTrial ' num2str(i) ' of ' num2str(n_trials)])
 
     trial_type = trls(i);
     if trial_type > 0
@@ -104,9 +104,10 @@ for i = 1:n_trials
         ax.Title.String = ['Trial ' num2str(i) ', NoGo, Amp = 0'];
     end
 
-
+    % set waveform parameters
     write_serial(s,msg_out);
     
+    % run appropriate trial type
     if is_go
         write_serial(s,teensy_go_trial);
     elseif ~is_go
@@ -115,10 +116,9 @@ for i = 1:n_trials
 
     % begin ITI
     iti = randi(itis,1);
+    fprintf(['\nRequested ITI: ' num2str(iti) ' seconds, Actual '])
     pause(iti)
-
-    fprintf(['\nState: ' num2str(f.UserData.State) ', Last Trial Outcome: ' num2str(f.UserData.trialOutcome) '\n'])
-            
+         
     if btn_stop.Value
         fprintf('\nAborted...\n')
         please_kill_me(max(itis),s,data_fid,data_fid_stream,notes);

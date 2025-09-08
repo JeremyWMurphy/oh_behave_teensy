@@ -1,14 +1,16 @@
 #include "WaveTable.h"
 #include <Adafruit_MCP4728.h>
 #include <Wire.h>
-#include <Bounce.h>
 
 const uint Fs = 5000; // sampling rate
+
+const bool enforceNoLick = true;
 
 // time lengths
 const uint trigLen = Fs/2; // trigger lenght in seconds
 const uint respLen = Fs*2; // how long from stim start is a response considered valid,
 const uint valveLen = Fs*1; // how long to open reward valve in samples
+const uint NoLickLen = Fs*2; //seconds of no licking
 
 // channels
 // ins
@@ -28,6 +30,10 @@ volatile int lickVal = 0;
 
 // state stuff
 volatile uint State = 0;
+
+volatile bool noLickStart = true;
+volatile bool noLickEnd = false;
+volatile uint32_t noLickT = 0;
 
 volatile bool stimStart = true;
 volatile bool stimEnd = false;
@@ -80,8 +86,6 @@ const byte numChars = 255;
 volatile char receivedChars[numChars];
 volatile bool newData = false;
 volatile char msgCode;
-const uint dataReportThrottle = 1; // factor to slow down serial reporting 
-volatile uint data[8] = {0,0,0,0,0,0,0,0};
 
 // Counters
 volatile uint32_t loopCount = 0;
@@ -170,6 +174,25 @@ void ohBehave(){
 void goNoGo(){
 
   // Go No-Go trial structure
+  if (enforceNoLick && !noLickEnd){
+    
+    stimStart = false; // dont start stim or response period
+    respStart = false;
+    
+    if (noLickStart){ // initial starting time of no lick period
+      noLickT = loopCount;
+      noLickStart = false;
+    }
+
+    if (lickVal == 1){ // if the fucker licks, reset the clock
+      noLickT = loopCount;
+      Serial.println("Bad Monkey!");
+    } else if (loopCount - noLickT >= noLickLen){ // if we made it without licking
+      stimStart = true; // start stim
+      respStart = true; // start response
+      noLickEnd = true; // end no licking period
+    }
+  }
 
   if (stimStart){
     stimT = loopCount;
@@ -223,9 +246,11 @@ void goNoGo(){
         }
         stimEnd = false;
         respEnd = false;
+        noLickEnd = false;
         respStart = true;
         dispStart = true;
         stimStart = true;
+        noLickStart = true;
         trialOutcome = 0;
         State = 0;
       
@@ -238,7 +263,6 @@ void goNoGo(){
   }
 }
 
- 
 void waveWrite(){
 
   // waveform generator
@@ -367,35 +391,22 @@ void pollData(){
 
 void dataReport(){
 
-    uint redundant = 1;
-
-    if (loopCount % redundant == 0){
-      data[0] = loopCount;
-      data[1] = frameCount;
-      data[2] = State;
-      data[3] = trialOutcome;
-      data[4] = curVal[0];
-      data[5] = curVal[1];
-      data[6] = lickVal;
-      data[7] = wheelVal;
-    }
-
     Serial.print("<");
-    Serial.print(data[0]);
+    Serial.print(loopCount);
     Serial.print(",");
-    Serial.print(data[1]);
+    Serial.print(frameCount);
     Serial.print(",");
-    Serial.print(data[2]);
+    Serial.print(State);
     Serial.print(",");
-    Serial.print(data[3]);
+    Serial.print(trialOutcome);
     Serial.print(",");
-    Serial.print(data[4]);
+    Serial.print(curVal[0]);
     Serial.print(",");
-    Serial.print(data[5]);
+    Serial.print(curVal[1]);
     Serial.print(",");
-    Serial.print(data[6]);    
+    Serial.print(lickVal);    
     Serial.print(",");
-    Serial.print(data[7]);  
+    Serial.print(wheelVal);  
     Serial.print(">");
     Serial.println("");
 

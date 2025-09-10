@@ -6,7 +6,7 @@ teensy_fs = 5000;
 % experiment parameters
 baseln = 5; % length of pause at begining of experiment
 
-itis = [9 14]; % **important, this is actually ~= iti - 2 sec, in the world of teensy the iti values will also encompass stim/resp/rew time, so iti = 10 -> e.g., 2 sec stim/resp window, reward delivery of e.g., 500 ms, then the remainder 7.5 sec is actual ITI
+itis = [9 14];
 n_trials = 200;
 
 prcnt_go = 0.75;
@@ -45,9 +45,6 @@ serial_port = 'COM4';
 up_every = 5000; % number of bytes to read in at a time
 n_sec_disp = 10;
 
-%cam_fs = 10; % camera frame rate
-%frame_duty_cycle = 0.2; % fraction of camera pulse high
-
 %% live data figure
 f = make_ui_figure(msg_out,teensy_fs,n_sec_disp);
 f.UserData = struct('trialOutcome',0,'State',0,'lastFrame',NaN,'data',[]);
@@ -69,9 +66,7 @@ id = id_field.Value;
 save_pth = pth_field.Text;
 exp_pth = [save_pth '/' id];
 mkdir(exp_pth);
-data_fid = fopen([exp_pth '/data.csv'],'w');
 data_fid_stream = fopen([exp_pth '/data_stream.csv'],'w');
-fprintf(data_fid,'%s\n',id);
 
 %% serial comms w/ teensy
 s = serialport(serial_port,115200);
@@ -114,6 +109,10 @@ for i = 1:n_trials
         write_serial(s,teensy_nogo_trial);
     end
 
+    while f.UserData.State > 0
+        % wait for end of trial from teensy
+    end
+
     % begin ITI
     iti = randi(itis,1);
     fprintf(['\nRequested ITI: ' num2str(iti) ' seconds, Actual '])
@@ -121,7 +120,7 @@ for i = 1:n_trials
          
     if btn_stop.Value
         fprintf('\nAborted...\n')
-        please_kill_me(max(itis),s,data_fid,data_fid_stream,notes);
+        please_kill_me(max(itis),s,data_fid_stream,notes);
         return
     end
 
@@ -130,24 +129,23 @@ for i = 1:n_trials
 end
 
 %% end of run
-please_kill_me(max(itis),s,data_fid,data_fid_stream,notes);
+please_kill_me(max(itis),s,data_fid_stream,notes);
 
 end
 
 %% Supporting functions
 
-function[] = please_kill_me(p,s,data_fid,data_fid_stream,notes)
+function[] = please_kill_me(p,s,data_fid_stream,notes)
 
 for i = 1:size(notes.Value,1)
     fprintf(data_fid,'%s\n',notes.Value{i});
 end
 
-%stop ni io
+%stop io
 pause(p)
-clear s
+clear(s)
 
 % close files
-fclose(data_fid);
 fclose(data_fid_stream);
 
 all_fig = findall(0, 'type', 'figure');
@@ -157,5 +155,7 @@ end
 
 %%
 function[] = write_serial(s,msg)
+
 write(s,msg,'string');
+
 end

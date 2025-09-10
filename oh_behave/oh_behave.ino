@@ -192,51 +192,52 @@ void goNoGo(){
       respStart = true; // start response
       noLickEnd = true; // end no licking period
     }
-  }
+    
+  } else {
 
-  if (stimStart){
-    stimT = loopCount;
-    stimStart = false;
-  }
-
-  waveWrite(); // present stim 
-
-  if (respStart){
-    respT = loopCount;
-    respStart = false;
-  }
-
-  // check if response period is over
-  if (loopCount - respT > respLen){
-    respEnd = true;
-  }
-
-  if (!respEnd){ 
-    if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT, now we no longer enter into here
-      trialOutcome = HIT;
-    } else if ((State == 3) && (lickVal == HIGH)){ // FA
-      trialOutcome = FA;
+    if (stimStart){
+      stimT = loopCount;
+      stimStart = false;
     }
-  }
 
-  if (stimEnd && respEnd){ // if stim and resp window are both over, evaluate outcome
+    waveWrite(); // present stim 
 
-    if (dispStart){
-      dispT = loopCount;
-      dispStart = false;
-      
-      if (trialOutcome == 0){
+    if (respStart){
+      respT = loopCount;
+      respStart = false;
+    }
 
-        if (State == 2){
-          trialOutcome = MISS;
+    // check if response period is over
+    if (loopCount - respT > respLen){
+      respEnd = true;
+    }
 
-        } else if (State == 3){
-          trialOutcome = CW;
-        }
+    if (!respEnd){ 
+      if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT, now we no longer enter into here
+        trialOutcome = HIT;
+      } else if ((State == 3) && (lickVal == HIGH)){ // FA
+        trialOutcome = FA;
       }
     }
 
-    if (loopCount - dispT > valveLen){  // end of reward dispens, reset things
+    if (stimEnd && respEnd){ // if stim and resp window are both over, evaluate outcome
+
+      if (dispStart){
+        dispT = loopCount;
+        dispStart = false;
+      
+        if (trialOutcome == 0){
+
+          if (State == 2){
+            trialOutcome = MISS;
+
+          } else if (State == 3){
+            trialOutcome = CW;
+          }
+        }
+      }
+
+      if (loopCount - dispT > valveLen){  // end of reward dispens, reset things
         
         digitalWrite(valveChan1,LOW);
         
@@ -254,11 +255,12 @@ void goNoGo(){
         trialOutcome = 0;
         State = 0;
       
-    } else if (trialOutcome == HIT) {
-      digitalWrite(valveChan1,HIGH);
+      } else if (trialOutcome == HIT) {
+        digitalWrite(valveChan1,HIGH);
 
-    } else {
-      // miss, cw, fa .. can put other things here, like error feedback
+      } else {
+        // miss, cw, fa .. can put other things here, like error feedback
+      }
     }
   }
 }

@@ -10,7 +10,7 @@ const bool enforceNoLick = true;
 const uint trigLen = Fs/2; // trigger lenght in seconds
 const uint respLen = Fs*2; // how long from stim start is a response considered valid,
 const uint valveLen = Fs*1; // how long to open reward valve in samples
-const uint NoLickLen = Fs*2; //seconds of no licking
+const uint noLickLen = Fs*2; //seconds of no licking
 
 // channels
 // ins
@@ -186,7 +186,6 @@ void goNoGo(){
 
     if (lickVal == 1){ // if the fucker licks, reset the clock
       noLickT = loopCount;
-      Serial.println("Bad Monkey!");
     } else if (loopCount - noLickT >= noLickLen){ // if we made it without licking
       stimStart = true; // start stim
       respStart = true; // start response

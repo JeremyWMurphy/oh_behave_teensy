@@ -41,13 +41,13 @@ pulse_base = '0';
 msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
-serial_port = 'COM4';
+serial_port = 'COM3';
 up_every = 5000; % number of bytes to read in at a time
 n_sec_disp = 10;
 
 %% live data figure
 f = make_ui_figure(msg_out,teensy_fs,n_sec_disp);
-f.UserData = struct('trialOutcome',0,'State',0,'lastFrame',NaN,'data',[]);
+f.UserData = struct('trialOutcome',0,'State',0,'Done',0);
 
 gl = get(f,'Children');
 
@@ -67,6 +67,8 @@ save_pth = pth_field.Text;
 exp_pth = [save_pth '/' id];
 mkdir(exp_pth);
 data_fid_stream = fopen([exp_pth '/data_stream.csv'],'w');
+data_fid_notes = fopen([exp_pth '/data_notes.csv'],'w');
+fprintf(data_fid_notes,'%s',[id '\n']);
 
 %% serial comms w/ teensy
 s = serialport(serial_port,115200);
@@ -83,20 +85,27 @@ write_serial(s,teensy_trigger);
 % pause for a baseline
 pause(baseln);
 
+fprintf(data_fid_notes,['Begin ' char(datetime('now','Format','HH:mm:ss')) '\n']);
+
 for i = 1:n_trials
 
     tic
 
+    fprintf(data_fid_notes,['\n Trial ' num2str(i) ' ' char(datetime('now','Format','HH:mm:ss'))]);
+   
+
     trial_type = trls(i);
-    if trial_type > 0
+    if trial_type > 0        
         is_go = true;        
         cur_amp = sig_amps_12bit(trial_type);
         msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' num2str(cur_amp) ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
         ax.Title.String = ['Trial ' num2str(i) ', Go, Amp = ' num2str(cur_amp)];  
+        fprintf(data_fid_notes,[', Go Trial, Amp = ' num2str(cur_amp)] );
     else
         is_go = false;
         msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',0,' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
         ax.Title.String = ['Trial ' num2str(i) ', NoGo, Amp = 0'];
+        fprintf(data_fid_notes,[', NoGo Trial, Amp = 0'] );
     end
 
     % set waveform parameters
@@ -109,9 +118,12 @@ for i = 1:n_trials
         write_serial(s,teensy_nogo_trial);
     end
 
-    while f.UserData.State > 0
+    while ~f.UserData.Done
         % wait for end of trial from teensy
+        pause(0.1)
     end
+
+    fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome) '\n'] );
 
     % begin ITI
     iti = randi(itis,1);
@@ -120,7 +132,7 @@ for i = 1:n_trials
          
     if btn_stop.Value
         fprintf('\nAborted...\n')
-        please_kill_me(max(itis),s,data_fid_stream,notes);
+        please_kill_me(max(itis),s,data_fid_stream,data_fid_notes,notes);
         return
     end
 
@@ -129,24 +141,25 @@ for i = 1:n_trials
 end
 
 %% end of run
-please_kill_me(max(itis),s,data_fid_stream,notes);
+please_kill_me(max(itis),s,data_fid_stream,data_fid_notes,notes);
 
 end
 
 %% Supporting functions
 
-function[] = please_kill_me(p,s,data_fid_stream,notes)
+function[] = please_kill_me(p,s,data_fid_stream,data_fid_notes,notes)
 
 for i = 1:size(notes.Value,1)
-    fprintf(data_fid,'%s\n',notes.Value{i});
+    fprintf(data_fid_notes,'%s\n',notes.Value{i});
 end
 
 %stop io
 pause(p)
-clear(s)
+clear('s')
 
 % close files
 fclose(data_fid_stream);
+fclose(data_fid_notes);
 
 all_fig = findall(0, 'type', 'figure');
 close(all_fig)

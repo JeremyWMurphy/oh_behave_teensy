@@ -41,6 +41,7 @@ volatile uint32_t stimT = 0;
 
 volatile bool respStart = true;
 volatile bool respEnd = false;
+volatile bool hasResponded = false;
 volatile uint32_t respT = 0;
 
 volatile bool dispStart = true;
@@ -209,13 +210,13 @@ void goNoGo(){
     // check if response period is over
     if (loopCount - respT > respLen){
       respEnd = true;
-    }
-
-    if (!respEnd){ 
-      if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT, now we no longer enter into here
+    } else if (!hasResponded){
+      if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT or FA, mark it, don't keep checking 
         trialOutcome = HIT;
+        hasResponded = true;
       } else if ((State == 3) && (lickVal == HIGH)){ // FA
         trialOutcome = FA;
+        hasResponded = true;
       }
     }
 
@@ -225,7 +226,7 @@ void goNoGo(){
         dispT = loopCount;
         dispStart = false;
       
-        if (trialOutcome == 0){
+        if (trialOutcome == 0){ // if there was never a response, assign miss or CW
 
           if (State == 2){
             trialOutcome = MISS;
@@ -246,6 +247,7 @@ void goNoGo(){
         }
         stimEnd = false;
         respEnd = false;
+        hasResponded = false;
         noLickEnd = false;
         respStart = true;
         dispStart = true;

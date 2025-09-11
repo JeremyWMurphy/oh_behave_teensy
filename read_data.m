@@ -114,6 +114,8 @@ if verbose
 
 end
 
+behavior = array2table(behavior,{'StartFrame',})
+
 
 
 

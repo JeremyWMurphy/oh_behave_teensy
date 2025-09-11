@@ -6,7 +6,7 @@ teensy_fs = 5000;
 % experiment parameters
 baseln = 5; % length of pause at begining of experiment
 
-itis = [9 14];
+itis = [5 5];
 n_trials = 200;
 
 prcnt_go = 0.75;
@@ -68,7 +68,7 @@ exp_pth = [save_pth '/' id];
 mkdir(exp_pth);
 data_fid_stream = fopen([exp_pth '/data_stream.csv'],'w');
 data_fid_notes = fopen([exp_pth '/data_notes.csv'],'w');
-fprintf(data_fid_notes,'%s',[id '\n']);
+fprintf(data_fid_notes,id);
 
 %% serial comms w/ teensy
 s = serialport(serial_port,115200);
@@ -85,15 +85,12 @@ write_serial(s,teensy_trigger);
 % pause for a baseline
 pause(baseln);
 
-fprintf(data_fid_notes,['Begin ' char(datetime('now','Format','HH:mm:ss')) '\n']);
+fprintf(data_fid_notes,['\nRun Begin at ' char(datetime('now','Format','HH:mm:ss')) '\n']);
 
 for i = 1:n_trials
 
-    tic
-
     fprintf(data_fid_notes,['\n Trial ' num2str(i) ' ' char(datetime('now','Format','HH:mm:ss'))]);
    
-
     trial_type = trls(i);
     if trial_type > 0        
         is_go = true;        
@@ -118,16 +115,20 @@ for i = 1:n_trials
         write_serial(s,teensy_nogo_trial);
     end
 
+    % wait a moment to allow teensy to enter trial state
+    pause(0.1);
+
     while ~f.UserData.Done
-        % wait for end of trial from teensy
+        % wait for end of trial message from teensy before moving on
+        % but make sure the serial callback has room to breath: 
+        drawnow
         pause(0.1)
     end
 
-    fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome) '\n'] );
+    fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
 
     % begin ITI
     iti = randi(itis,1);
-    fprintf(['\nRequested ITI: ' num2str(iti) ' seconds, Actual '])
     pause(iti)
          
     if btn_stop.Value
@@ -135,8 +136,6 @@ for i = 1:n_trials
         please_kill_me(max(itis),s,data_fid_stream,data_fid_notes,notes);
         return
     end
-
-    toc
 
 end
 

@@ -42,19 +42,23 @@ if ~isempty(data)
 
     ot = find(data(:,4) ~= 0,1,'first'); 
     if ~isempty(ot)
+
         f.UserData.trialOutcome = data(ot,4);
+        f.UserData.Done = 1;
+
         f.Children.Children(8).Children.Children(7).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(8).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(9).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(10).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(f.UserData.trialOutcome+6).FontColor = [0 1 1];
-        f.UserData.Done = 1;
+      
     else
-        f.UserData.trialOutcome = 0;
+
         f.Children.Children(8).Children.Children(7).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(8).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(9).FontColor = [0.5 0.5 0.5];
         f.Children.Children(8).Children.Children(10).FontColor = [0.5 0.5 0.5];
+
     end
 
 end

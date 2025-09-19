@@ -6,23 +6,26 @@ teensy_fs = 5000;
 % experiment parameters
 baseln = 5; % length of pause at begining of experiment
 
-itis = [5 5];
-n_trials = 200;
+itis = [5 7];
+n_trials = 300;
 
-prcnt_go = 0.75;
-sig_amps = [1 2 3 4 5];
+prcnt_go = 0.9;
+sig_amps = [0.62 0.8 1 2 4];
 sig_amps_12bit = map_jm(sig_amps,0,5,0,4095);
+sig_amps_12bit = round(sig_amps_12bit);
 
 prcnt_amps = [0.2 0.2 0.2 0.2 0.2];
 
 n_go_trls = round(n_trials*prcnt_go);
 trls = [];
 for i = 1:numel(sig_amps)
-    trls = cat(1,trls,sig_amps(i)*ones(prcnt_amps(i)*n_go_trls,1));
+    trls = cat(1,trls,i*ones(round(prcnt_amps(i)*n_go_trls),1));
 end
 n_nogo_trls = round(n_trials*(1-prcnt_go));
 trls = cat(1,trls,zeros(n_nogo_trls,1));
 trls = trls(randperm(n_trials));
+
+
 
 % teensy state parameters
 teensy_reset =      '<S,1>';
@@ -41,7 +44,7 @@ pulse_base = '0';
 msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
-serial_port = 'COM3';
+serial_port = 'COM6';
 up_every = 5000; % number of bytes to read in at a time
 n_sec_disp = 10;
 

@@ -102,7 +102,7 @@ void setup() {
 
   analogReadResolution(10);
 
-  Serial.begin(9600); // baud rate here doesn't matter for teensy (?)
+  Serial.begin(115200); // baud rate here doesn't matter for teensy (?)
   Serial.println("Connected");
 
   Wire.begin();
@@ -148,7 +148,6 @@ void ohBehave(){
     loopCount = 0;
     frameCount = 0;
     State = 0;
-    delay(1000);
 
   } else if (State == 2){ // GO
     goNoGo();
@@ -456,14 +455,7 @@ void pairing(){
     // check if response period is over
     if (loopCount - respT > respLen){
       respEnd = true;
-    } else if (!hasResponded){
-      if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT or FA, mark it, don't keep checking 
-        trialOutcome = HIT;
-        hasResponded = true;
-      } else if ((State == 3) && (lickVal == HIGH)){ // FA
-        trialOutcome = FA;
-        hasResponded = true;
-      }
+      trialOutcome = HIT;
     }
 
     if (stimEnd && respEnd){ // if stim and resp window are both over, evaluate outcome
@@ -510,6 +502,7 @@ void lickForReward(){
     if (dispStart){
       dispT = loopCount;
       dispStart = false;
+      trialOutcome = HIT;
     }
 
     if (loopCount - dispT > valveLen){  // end of reward dispens, reset things    
@@ -517,6 +510,7 @@ void lickForReward(){
       dispStart = true;
       giveReward = false;
       State = 0;
+      trialOutcome = 0;
       
     } else {
       digitalWrite(valveChan1,HIGH);

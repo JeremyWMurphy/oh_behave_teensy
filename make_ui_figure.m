@@ -13,6 +13,33 @@ fig.UserData = struct('trialOutcome',0,'State',0,'Done',0,'run_type',1);
 
 gl = uigridlayout(fig,[10 20],'BackgroundColor','black');
 
+%% main axes
+ax = axes(gl);
+ax.Layout.Row = [2 10];
+ax.Layout.Column = [4 15];
+ax.NextPlot = 'add';
+ax.Color = [0 0 0];
+ax.XColor = [1 1 1];
+ax.YColor = [1 1 1];
+ax.XLabel.String = 'SECS';
+ax.YLim = [0 8];
+ax.XLim = [1 fs*n_sec_disp];
+ax.Title.Color = [1 1 1];
+ax.Title.FontSize = 18;
+ax.Title.FontWeight = 'normal';
+ax.Title.String = 'Waiting to start';
+
+ax.YTick = [1 3 5 7];
+ax.YTickLabel = {'Piezo','Wheel','Frame1','Licks'};
+nan_vec = nan(fs*n_sec_disp,1);
+
+ax.XAxis.Visible  = 'off';
+
+plot(ax,nan_vec,'m'); % piezo signal
+plot(ax,nan_vec,'g'); % wheel
+plot(ax,nan_vec,'c'); % frame raw
+plot(ax,nan_vec,'y'); % lick detector
+
 %% set id name and save path
 
 % id label
@@ -31,15 +58,6 @@ edt = uieditfield(gl, 'Value',default_id, ...
 edt.Layout.Row = 1;
 edt.Layout.Column = [2 4];
 
-pth_btn = uibutton(gl,...
-    'BackgroundColor',[0 0 0],...
-    'Text', 'Set Path',...
-    'FontColor',[1 1 1],...
-    "ButtonPushedFcn", @(src,event) pthButtonPushed(pth_txt));
-
-pth_btn.Layout.Row = 1;
-pth_btn.Layout.Column = 5;
-
 % display and set save path field
 pth_txt = uilabel(gl, ...
     'Text','C:\Users\jeremy\Documents\Data_Temp\',...    
@@ -48,6 +66,15 @@ pth_txt = uilabel(gl, ...
 
 pth_txt.Layout.Row = 1;
 pth_txt.Layout.Column = [6 20];
+
+pth_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Set Path',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) pthButtonPushed(pth_txt));
+
+pth_btn.Layout.Row = 1;
+pth_btn.Layout.Column = 5;
 
 %% trial type toggle (Lick, Pair, Detect)
 
@@ -64,7 +91,7 @@ tt1_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'Lick',...
     'FontColor',[1 1 1],...
-    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,3));
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,3,ax));
 tt1_btn.Layout.Row = 2;
 tt1_btn.Layout.Column = 2;
 
@@ -72,7 +99,7 @@ tt2_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'Pair',...
     'FontColor',[1 1 1],...
-    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,2));
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,2,ax));
 tt2_btn.Layout.Row = 2;
 tt2_btn.Layout.Column = 3;
 
@@ -80,7 +107,7 @@ tt3_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'Detect',...
     'FontColor',[1 1 1],...
-    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,1));
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,1,ax));
 tt3_btn.Layout.Row = 2;
 tt3_btn.Layout.Column = 4;
 
@@ -124,33 +151,6 @@ quit_btn = uibutton(gl,'state',...
 
 quit_btn.Layout.Row = 10;
 quit_btn.Layout.Column = 3;
-
-%% main axes
-ax = axes(gl);
-ax.Layout.Row = [2 10];
-ax.Layout.Column = [4 15];
-ax.NextPlot = 'add';
-ax.Color = [0 0 0];
-ax.XColor = [1 1 1];
-ax.YColor = [1 1 1];
-ax.XLabel.String = 'SECS';
-ax.YLim = [0 8];
-ax.XLim = [1 fs*n_sec_disp];
-ax.Title.Color = [1 1 1];
-ax.Title.FontSize = 18;
-ax.Title.FontWeight = 'normal';
-ax.Title.String = 'Waiting to start';
-
-ax.YTick = [1 3 5 7];
-ax.YTickLabel = {'Piezo','Wheel','Frame1','Licks'};
-nan_vec = nan(fs*n_sec_disp,1);
-
-ax.XAxis.Visible  = 'off';
-
-plot(ax,nan_vec,'m'); % piezo signal
-plot(ax,nan_vec,'g'); % wheel
-plot(ax,nan_vec,'c'); % frame raw
-plot(ax,nan_vec,'y'); % lick detector
 
 %% trial type feedback and outcome panel
 
@@ -311,9 +311,16 @@ function vCloseButtonPushed(s)
     write(s,'<S,6>','string');
 end
 
-function ttButtonPushed(fig,tt)
+function ttButtonPushed(fig,tt,ax)
     % set run type
     fig.UserData.run_type = tt;
+    if tt == 1
+        ax.Title.String = 'Detection Run ... ';
+    elseif tt == 2
+        ax.Title.String = 'Pairing Run ... ';
+    elseif tt == 3
+        ax.Title.String = 'Lick-for-reward Run ... ';
+    end
 end
 
 

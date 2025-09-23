@@ -25,17 +25,17 @@ if ~isempty(data)
         f.UserData.State = data(st,3);
         if f.UserData.State < 4
             f.UserData.Done = 0;
-            f.Children.Children(8).Children.Children(3).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(8).Children.Children(4).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(8).Children.Children(5).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(8).Children.Children(6).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(8).Children.Children(f.UserData.State+3).FontColor = [0 1 1];
+            f.Children.Children(14).Children.Children(3).FontColor = [0.5 0.5 0.5];
+            f.Children.Children(14).Children.Children(4).FontColor = [0.5 0.5 0.5];
+            f.Children.Children(14).Children.Children(5).FontColor = [0.5 0.5 0.5];
+            f.Children.Children(14).Children.Children(6).FontColor = [0.5 0.5 0.5];
+            f.Children.Children(14).Children.Children(f.UserData.State+3).FontColor = [0 1 1];
         end
     else
-        f.Children.Children(8).Children.Children(3).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(4).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(5).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(6).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(3).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(4).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(5).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(6).FontColor = [0.5 0.5 0.5];
         f.UserData.State = data(st,3);
 
     end
@@ -46,18 +46,18 @@ if ~isempty(data)
         f.UserData.trialOutcome = data(ot,4);
         f.UserData.Done = 1;
 
-        f.Children.Children(8).Children.Children(7).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(8).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(9).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(10).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(f.UserData.trialOutcome+6).FontColor = [0 1 1];
+        f.Children.Children(14).Children.Children(7).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(8).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(9).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(10).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(f.UserData.trialOutcome+6).FontColor = [0 1 1];
       
     else
 
-        f.Children.Children(8).Children.Children(7).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(8).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(9).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(8).Children.Children(10).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(7).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(8).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(9).FontColor = [0.5 0.5 0.5];
+        f.Children.Children(14).Children.Children(10).FontColor = [0.5 0.5 0.5];
 
     end
 

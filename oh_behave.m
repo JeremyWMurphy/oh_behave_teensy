@@ -9,6 +9,8 @@ baseln = 5; % length of pause at begining of experiment
 itis = [5 7];
 n_trials = 300;
 
+present = 0;
+
 prcnt_go = 0.9;
 sig_amps = [0.62 0.8 1 2 4];
 sig_amps_12bit = map_jm(sig_amps,0,5,0,4095);
@@ -24,6 +26,8 @@ end
 n_nogo_trls = round(n_trials*(1-prcnt_go));
 trls = cat(1,trls,zeros(n_nogo_trls,1));
 trls = trls(randperm(n_trials));
+
+begin_run = 0;
 
 % teensy state parameters
 teensy_reset =      '<S,1>';
@@ -42,16 +46,16 @@ pulse_amp = '0';
 pulse_intrvl = '0';
 pulse_reps = '3';
 pulse_base = '0';
-msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
+% msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
 serial_port = 'COM3';
-up_every = 5000; % number of bytes to read in at a time
+up_every = 8000; % number of bytes to read in at a time
 n_sec_disp = 10;
 
 %%
 %% serial comms w/ teensy
-s = serialport(serial_port,9600);
+s = serialport(serial_port,115200);
 pause(1);
 s.flush;
 write_serial(s,teensy_reset);
@@ -64,7 +68,7 @@ gl = get(f,'Children');
 
 ax = gl.Children(1);
 id_field = gl.Children(3);
-pth_field = gl.Children(5);
+pth_field = gl.Children(4);
 btn_strt = gl.Children(11);
 btn_stop = gl.Children(12);
 btn_quit = gl.Children(13);
@@ -74,12 +78,15 @@ while ~btn_quit.Value
 
     if btn_strt.Value
         begin_run = 1;
+        btn_strt.Value = 0;
     end
 
     if begin_run == 1
 
+        i = 1;
+
         %% setup data files
-        id = [id_field.Value char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
+        id = [id_field.Value '_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
         id_field.Value = id;
         save_pth = pth_field.Text;
         exp_pth = [save_pth '/' id];
@@ -90,18 +97,26 @@ while ~btn_quit.Value
 
         s.configureCallback('byte',up_every, @(src,evt) plotSaveDataAvailable(src, evt, data_fid_stream, ax, up_every,f));
 
-        write_serial(s,teensy_reset);
-        write_serial(s,teensy_trigger);
-        
+        write_serial(s,teensy_reset); % resetting makes the teensy unresponsive for 1 second
         % pause for initial baseline
         pause(baseln);
-
+        write_serial(s,teensy_trigger);
+        pause(0.1)
+        
         if f.UserData.run_type == 1 % detection task
 
             fprintf(data_fid_notes,'\nDetection Task');
             fprintf(data_fid_notes,['\nRun Begin at ' char(datetime('now','Format','HH:mm:ss'))]);
 
-            for i = 1:n_trials
+           present = 1;
+
+            while present
+
+                if i > n_trials
+                    present = 0;
+                end
+
+                i = i + 1;
 
                 fprintf(data_fid_notes,['\n Trial ' num2str(i) ' ' char(datetime('now','Format','HH:mm:ss'))]);
 
@@ -135,7 +150,6 @@ while ~btn_quit.Value
                 while ~f.UserData.Done
                     % wait for end of trial message from teensy before moving on
                     % but make sure the serial callback has room to breath:
-                    drawnow
                     pause(0.1)
                 end
 
@@ -147,8 +161,12 @@ while ~btn_quit.Value
 
                 if btn_stop.Value %% end the run
                     fprintf('\nAborted...\n')
-                    kill_run();
-                    return
+                    begin_run = 0;
+                    btn_strt.Value = 0;
+                    configureCallback(s,'off');
+                    btn_stop.Value = 0;
+                    kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
+                    present = 0;
                 end
 
             end
@@ -161,7 +179,15 @@ while ~btn_quit.Value
             fprintf(data_fid_notes,'\nPairing Task');
             fprintf(data_fid_notes,['\nRun Begin at ' char(datetime('now','Format','HH:mm:ss'))]);
 
-            for i = 1:n_trials
+            present = 1;
+
+            while present
+
+                if i > n_trials
+                    present = 0;
+                end
+
+                i = i + 1;
 
                 fprintf(data_fid_notes,['\n Trial ' num2str(i) ' ' char(datetime('now','Format','HH:mm:ss'))]);
 
@@ -180,7 +206,6 @@ while ~btn_quit.Value
                 while ~f.UserData.Done
                     % wait for end of trial message from teensy before moving on
                     % but make sure the serial callback has room to breath:
-                    drawnow
                     pause(0.1)
                 end
 
@@ -190,24 +215,32 @@ while ~btn_quit.Value
 
                 if btn_stop.Value
                     fprintf('\nAborted...\n')
-                    kill_run();
-                    return
+                    begin_run = 0;
+                    btn_strt.Value = 0;
+                    configureCallback(s,'off');
+                    btn_stop.Value = 0;
+                    kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
+                    present = 0;
                 end
 
             end
 
         elseif  f.UserData.run_type == 3 % just lick for reward task
 
-            write_serial(s,teensy_reset);
-            write_serial(s,teensy_trigger);
-
-            % pause for initial baseline
-            pause(baseln);
+            pause(baseln)
 
             fprintf(data_fid_notes,'\nLick for Reward Task');
             fprintf(data_fid_notes,['\nRun Begin at ' char(datetime('now','Format','HH:mm:ss'))]);
 
-            for i = 1:n_trials
+            present = 1;
+
+            while present
+
+                if i > n_trials
+                    present = 0;
+                end
+
+                i = i + 1;
 
                 fprintf(data_fid_notes,['\n Trial ' num2str(i) ' ' char(datetime('now','Format','HH:mm:ss'))]);
                 write_serial(s,teensy_lick_trial);
@@ -218,7 +251,6 @@ while ~btn_quit.Value
                 while ~f.UserData.Done
                     % wait for end of trial message from teensy before moving on
                     % but make sure the serial callback has room to breath:
-                    drawnow
                     pause(0.1)
                 end
 
@@ -228,27 +260,49 @@ while ~btn_quit.Value
 
                 if btn_stop.Value
                     fprintf('\nAborted...\n')
-                    kill_run();
-                    return
+                    begin_run = 0;
+                    btn_strt.Value = 0;
+                    configureCallback(s,'off');
+                    btn_stop.Value = 0;
+                    kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
+                    present = 0;
                 end
             end
         end
 
-        begin_run = 0;
-        btn_strt.Value = 0;
-        kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
+        if i >= n_trials
+            begin_run = 0;
+            btn_strt.Value = 0;
+            configureCallback(s,'off');
+            kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
+        end
 
-    end  
+    end
+
+    pause(0.1);
+
 end
 
 %% end program
-kill_me(max(itis),s,data_fid_stream,data_fid_notes,notes);
+try exist(data_fid_stream,'var')
+    kill_me(max(itis),s,data_fid_stream,data_fid_notes,notes);
+catch
+    kill_me_early(s);
+end
 
 end
 
 %% Supporting functions
 
-%% program quit function
+%% program quit functions
+
+function[] = kill_me_early(s)
+
+clear s
+all_fig = findall(0, 'type', 'figure');
+close(all_fig)
+
+end
 
 function[] = kill_me(p,s,fid1,fid2,notes)
 
@@ -260,7 +314,7 @@ end
 write(s,'<S,1>','string');
 write(s,'<S,0>','string');
 pause(p)
-clear('s')
+clear s
 
 % close files
 fclose(fid1);

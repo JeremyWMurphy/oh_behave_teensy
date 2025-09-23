@@ -1,27 +1,35 @@
-function fig = make_ui_figure(msg,fs,n_sec_disp)
+function fig = make_ui_figure(fs,n_sec_disp,s)
 
-default_id = [ 'NA_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
+default_id = 'NA';
 
-% main figure
-fig = uifigure('Position',[1920/4,1080/4, 1024, 512],'Color','black');
+%% main figure
+ss = get(0,'screensize');
+wd = ss(3);
+ht = ss(4);
+
+fig = uifigure('Position',[round(wd*0.25),round(ht*0.25),round(wd*0.67),round(ht*0.67)],'Color','black');
+
+fig.UserData = struct('trialOutcome',0,'State',0,'Done',0,'run_type',1);
+
 gl = uigridlayout(fig,[10 20],'BackgroundColor','black');
 
-% subj name field
+%% set id name and save path
+
+% id label
+id_txt = uilabel(gl, ...
+    'Text','Run ID:',...    
+    'BackgroundColor',[0 0 0],...
+    'FontColor',[1 1 1]);
+id_txt.Layout.Row = 1;
+id_txt.Layout.Column = 1;
+
+% subj name edit field
 edt = uieditfield(gl, 'Value',default_id, ...
     'BackgroundColor',[0 0 0],...
     'FontColor',[1 1 1]);
 
 edt.Layout.Row = 1;
-edt.Layout.Column = [1 2];
-
-% display and set save path field
-pth_txt = uilabel(gl, ...
-    'Text','C:\Users\jeremy\Documents\Data_Temp\',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[1 1 1]);
-
-pth_txt.Layout.Row = 1;
-pth_txt.Layout.Column = [4 10];
+edt.Layout.Column = [2 4];
 
 pth_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
@@ -30,31 +38,94 @@ pth_btn = uibutton(gl,...
     "ButtonPushedFcn", @(src,event) pthButtonPushed(pth_txt));
 
 pth_btn.Layout.Row = 1;
-pth_btn.Layout.Column = 3;
+pth_btn.Layout.Column = 5;
 
-% serial console 
+% display and set save path field
+pth_txt = uilabel(gl, ...
+    'Text','C:\Users\jeremy\Documents\Data_Temp\',...    
+    'BackgroundColor',[0 0 0],...
+    'FontColor',[1 1 1]);
+
+pth_txt.Layout.Row = 1;
+pth_txt.Layout.Column = [6 20];
+
+%% trial type toggle (Lick, Pair, Detect)
+
+% display and set save path field
+run_txt = uilabel(gl, ...
+    'Text','Run Type:',...    
+    'BackgroundColor',[0 0 0],...
+    'FontColor',[1 1 1]);
+
+run_txt.Layout.Row = 2;
+run_txt.Layout.Column = 1;
+
+tt1_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Lick',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,3));
+tt1_btn.Layout.Row = 2;
+tt1_btn.Layout.Column = 2;
+
+tt2_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Pair',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,2));
+tt2_btn.Layout.Row = 2;
+tt2_btn.Layout.Column = 3;
+
+tt3_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Detect',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,1));
+tt3_btn.Layout.Row = 2;
+tt3_btn.Layout.Column = 4;
+
+
+%% notes text box
+
+notes = uitextarea(gl);
+notes.Layout.Column = [1 3];
+notes.Layout.Row = [3 9];
+notes.BackgroundColor = [0 0 0];
+notes.FontColor = [0 1 0];
+
+edt.ValueChangedFcn = @(src,event) update_id(edt,notes);
+
+%% run start, run end, quit buttons
 
 % start button
 strt_btn = uibutton(gl,'state',...
     'BackgroundColor',[0 0 0],...
-    'Text', 'Start',...
+    'Text', 'Begin',...
     'FontColor',[1 1 1],...
-    'Value', false);
-
+    'Value',0);
 strt_btn.Layout.Row = 10;
 strt_btn.Layout.Column = 1;
 
 % stop button
 stp_btn = uibutton(gl,'state',...
     'BackgroundColor',[0 0 0],...
-    'Text', 'Stop',...
+    'Text', 'End',...
     'FontColor',[1 1 1],...
-    'Value', false);
-
+    'Value',0);
 stp_btn.Layout.Row = 10;
 stp_btn.Layout.Column = 2;
 
-% main axes
+% quit button
+quit_btn = uibutton(gl,'state',...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Quit',...
+    'FontColor',[1 1 1],...
+    'Value',0);
+
+quit_btn.Layout.Row = 10;
+quit_btn.Layout.Column = 3;
+
+%% main axes
 ax = axes(gl);
 ax.Layout.Row = [2 10];
 ax.Layout.Column = [4 15];
@@ -81,13 +152,7 @@ plot(ax,nan_vec,'g'); % wheel
 plot(ax,nan_vec,'c'); % frame raw
 plot(ax,nan_vec,'y'); % lick detector
 
-notes = uitextarea(gl);
-notes.Layout.Column = [1 3];
-notes.Layout.Row = [2 9];
-notes.BackgroundColor = [0 0 0];
-notes.FontColor = [0 1 0];
-
-edt.ValueChangedFcn = @(src,event) update_id(edt,notes);
+%% trial type feedback and outcome panel
 
 p = uipanel(gl);
 p.Layout.Row = [2 6];
@@ -177,9 +242,52 @@ state_txt.Layout.Row = 5;
 state_txt.Layout.Column = 2;
 state_txt.FontSize = 18;
 
-fontname(fig,'Arial')
+%% reward button, open valve, close valve
+
+valve_txt = uilabel(gl, ...
+    'Text','Reward Port:',...    
+    'BackgroundColor',[0 0 0],...
+    'FontColor',[0.5 0.5 0.5]);
+valve_txt.Layout.Row = 9;
+valve_txt.Layout.Column = [16 20];
+valve_txt.FontSize = 18;
+valve_txt.FontColor = [1 1 1];
+
+
+rew_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Give Reward',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) rewButtonPushed(s) ...    
+);
+rew_btn.Layout.Row = 10;
+rew_btn.Layout.Column = [16 17];
+
+open_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Open',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) vOpenButtonPushed(s) ...    
+);
+open_btn.Layout.Row = 10;
+open_btn.Layout.Column = 18;
+
+close_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Close',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) vCloseButtonPushed(s) ...    
+);
+close_btn.Layout.Row = 10;
+close_btn.Layout.Column = 19;
+
+%%
+
+fontname(fig,'Arial');
 
 end
+
+%% callbacks
 
 function pthButtonPushed(txt)
     selpath = uigetdir('C:\Users\jeremy\Desktop\Data_Temp\');
@@ -189,6 +297,23 @@ end
 function update_id(edt,notes)
     edt.Value = [edt.Value '_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
     notes.Value = edt.Value;
+end
+
+function rewButtonPushed(s)
+    write(s,'<S,7>','string');
+end
+
+function vOpenButtonPushed(s)
+    write(s,'<S,5>','string');
+end
+
+function vCloseButtonPushed(s)
+    write(s,'<S,6>','string');
+end
+
+function ttButtonPushed(fig,tt)
+    % set run type
+    fig.UserData.run_type = tt;
 end
 
 

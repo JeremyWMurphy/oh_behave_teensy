@@ -52,6 +52,8 @@ volatile bool trigStart = true;
 volatile bool trigEnd = false;
 volatile uint32_t trigT = 0;
 
+volatile bool giveReward = false;
+
 volatile uint trialOutcome = 0;
 const uint HIT = 1;
 const uint MISS = 2;
@@ -162,7 +164,17 @@ void ohBehave(){
   
   } else if (State == 6){ // close valve1
     digitalWrite(valveChan1, LOW);
-  }  
+
+  } else if (State == 7){ // trigger a typical reward
+    justReward();
+
+  } else if (State == 8){ // stim-rew pairing
+    pairing();
+
+  } else if (State == 9){ // lick for reward 
+    lickForReward();
+
+  }
 
   dataReport();
   pollData();
@@ -385,6 +397,132 @@ void fireTrig(){
     digitalWrite(trigChan4,HIGH);
   }
 
+}
+
+void justReward(){
+
+    if (dispStart){
+      dispT = loopCount;
+      dispStart = false;
+    }
+
+    if (loopCount - dispT > valveLen){  // end of reward dispense, reset things
+        
+      digitalWrite(valveChan1,LOW);
+      dispStart = true;
+      State = 0;
+      
+    } else {
+      digitalWrite(valveChan1,HIGH);
+    }
+
+}
+
+void pairing(){
+
+  // pairing but with Go No-Go trial structure
+  if (enforceNoLick && !noLickEnd){
+    
+    stimStart = false; // dont start stim or response period
+    respStart = false;
+    
+    if (noLickStart){ // initial starting time of no lick period
+      noLickT = loopCount;
+      noLickStart = false;
+    }
+
+    if (lickVal == 1){ // if the fucker licks, reset the clock
+      noLickT = loopCount;
+    } else if (loopCount - noLickT >= noLickLen){ // if we made it without licking
+      stimStart = true; // start stim
+      respStart = true; // start response
+      noLickEnd = true; // end no licking period
+    }
+    
+  } else {
+
+    if (stimStart){
+      stimT = loopCount;
+      stimStart = false;
+    }
+
+    waveWrite(); // present stim 
+
+    if (respStart){
+      respT = loopCount;
+      respStart = false;
+    }
+
+    // check if response period is over
+    if (loopCount - respT > respLen){
+      respEnd = true;
+    } else if (!hasResponded){
+      if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT or FA, mark it, don't keep checking 
+        trialOutcome = HIT;
+        hasResponded = true;
+      } else if ((State == 3) && (lickVal == HIGH)){ // FA
+        trialOutcome = FA;
+        hasResponded = true;
+      }
+    }
+
+    if (stimEnd && respEnd){ // if stim and resp window are both over, evaluate outcome
+
+      if (dispStart){
+        dispT = loopCount;
+        dispStart = false;
+      }
+
+      if (loopCount - dispT > valveLen){  // end of reward dispens, reset things
+        
+        digitalWrite(valveChan1,LOW);
+        
+        for (int i = 0; i< 4; i++){
+          stimOn[i] = true;
+          inBase[i] = true;
+        }
+        stimEnd = false;
+        respEnd = false;
+        hasResponded = false;
+        noLickEnd = false;
+        respStart = true;
+        dispStart = true;
+        stimStart = true;
+        noLickStart = true;
+        trialOutcome = 0;
+        State = 0;
+      
+      } else {
+        digitalWrite(valveChan1,HIGH);
+
+      }
+    }
+  }
+}
+
+void lickForReward(){
+
+  if (lickVal==HIGH && dispStart){ // if there's a lick and we're ready to dispense the reward
+    giveReward = true;
+  }
+
+  if (giveReward){
+    if (dispStart){
+      dispT = loopCount;
+      dispStart = false;
+    }
+
+    if (loopCount - dispT > valveLen){  // end of reward dispens, reset things    
+      digitalWrite(valveChan1,LOW);
+      dispStart = true;
+      giveReward = false;
+      State = 0;
+      
+    } else {
+      digitalWrite(valveChan1,HIGH);
+
+    } 
+  }
 }
 
 void pollData(){

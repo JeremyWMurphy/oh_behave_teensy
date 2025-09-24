@@ -26,51 +26,12 @@ if ~isempty(data)
     ax.Children(2).set('Ydata',[ax.Children(2).YData(size(data,1)+1:end) 5 + [diff(data(:,2)') 0]]); % frames
     ax.Children(1).set('Ydata',[ax.Children(1).YData(size(data,1)+1:end) 7 + data(:,7)']); % licks
 
-    % check teensy state
-    st = find(data(:,3) ~= 0, 1, 'first');
-    % if the teensy is not idling
-    if ~isempty(st)
-        % get the state
-        f.UserData.State = data(st,3);
-        if f.UserData.State < 4
-            f.UserData.Done = 0;
-            f.Children.Children(14).Children.Children(3).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(14).Children.Children(4).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(14).Children.Children(5).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(14).Children.Children(6).FontColor = [0.5 0.5 0.5];
-            f.Children.Children(14).Children.Children(f.UserData.State+3).FontColor = [0 1 1];
-        end
-    else
-        f.Children.Children(14).Children.Children(3).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(4).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(5).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(6).FontColor = [0.5 0.5 0.5];
-        f.UserData.State = data(st,3);
-
-    end
-
     ot = find(data(:,4) ~= 0,1,'first'); 
     if ~isempty(ot)
-
         f.UserData.trialOutcome = data(ot,4);
         f.UserData.Done = 1;
-
-        f.Children.Children(14).Children.Children(7).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(8).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(9).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(10).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(f.UserData.trialOutcome+6).FontColor = [0 1 1];
-      
-    else
-
-        f.Children.Children(14).Children.Children(7).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(8).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(9).FontColor = [0.5 0.5 0.5];
-        f.Children.Children(14).Children.Children(10).FontColor = [0.5 0.5 0.5];
-
     end
 
 end
 
 
-end

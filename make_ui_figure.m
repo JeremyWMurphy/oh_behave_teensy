@@ -11,7 +11,7 @@ fig = uifigure('Position',[round(wd*0.25),round(ht*0.25),round(wd*0.67),round(ht
 
 fig.UserData = struct('trialOutcome',0,'run_type',1,'state',0,'Done',0);
 
-gl = uigridlayout(fig,[10 20],'BackgroundColor','black');
+gl = uigridlayout(fig,[10 15],'BackgroundColor','black');
 
 %% main axes
 ax = axes(gl);
@@ -160,96 +160,6 @@ quit_btn = uibutton(gl,...
 quit_btn.Layout.Row = 10;
 quit_btn.Layout.Column = 3;
 
-%% trial type feedback and outcome panel
-
-p = uipanel(gl);
-p.Layout.Row = [2 6];
-p.Layout.Column = [16 19];
-p.BackgroundColor = [0 0 0];
-p.BorderColor = [1 1 1];
-
-pgl = uigridlayout(p,[5 2],'BackgroundColor','black');
-
-state_txt = uilabel(pgl, ...
-    'Text','State',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[1 1 1]);
-state_txt.Layout.Row = 1;
-state_txt.Layout.Column = 1;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','Outcome',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[1 1 1]);
-state_txt.Layout.Row = 1;
-state_txt.Layout.Column = 2;
-state_txt.FontSize = 18;
- 
-state_txt = uilabel(pgl, ...
-    'Text','Idle',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 2;
-state_txt.Layout.Column = 1;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','Reset',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 3;
-state_txt.Layout.Column = 1;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','Go',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 4;
-state_txt.Layout.Column = 1;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','NoGo',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 5;
-state_txt.Layout.Column = 1;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','Hit',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 2;
-state_txt.Layout.Column = 2;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','Miss',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 3;
-state_txt.Layout.Column = 2;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','CW',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 4;
-state_txt.Layout.Column = 2;
-state_txt.FontSize = 18;
-
-state_txt = uilabel(pgl, ...
-    'Text','FA',...    
-    'BackgroundColor',[0 0 0],...
-    'FontColor',[0.5 0.5 0.5]);
-state_txt.Layout.Row = 5;
-state_txt.Layout.Column = 2;
-state_txt.FontSize = 18;
-
 %% reward button, open valve, close valve
 
 valve_txt = uilabel(gl, ...
@@ -329,8 +239,9 @@ function ttButtonPushed(fig,tt,ax)
     elseif tt == 3
         ax.Title.String = 'Lick-for-reward Run... ';
     elseif tt == 4
-        ax.Title.String = 'Lick Stream... ';
+        ax.Title.String = 'live streaming, not saving...';
     end
+
 end
 
 function flowControl(fig,st)

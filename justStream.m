@@ -1,4 +1,4 @@
-function justStream(src, ~,ax,up_every)
+function justStream(src,~,ax,up_every)
 
 % OUTPUT from Teensy is,
 % <loopNum, FrameNum, State, TrialOutcome, Ao0, Ao1, Licks, Wheel>

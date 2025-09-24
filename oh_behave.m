@@ -11,6 +11,8 @@ prcnt_go = 0.9;
 sig_amps = [0.62 0.8 1 2 4];
 prcnt_amps = [0.2 0.2 0.2 0.2 0.2];
 
+lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward
+
 % teensy waveform stimulus parameters
 chan = '0';
 pulse_type = '0';
@@ -50,8 +52,9 @@ teensy_lick_trial =   '<S,9>';
 % connect to teensy
 s = serialport(serial_port,115200);
 pause(1);
-s.flush;
-write_serial(s,teensy_reset);
+
+% task outcomes
+outcomes = {'Hit','Miss','CW','FA'};
 
 %% make main gui figure
 f = make_ui_figure(teensy_fs,n_sec_disp,s);
@@ -61,26 +64,36 @@ gl = get(f,'Children');
 ax = gl.Children(1);
 id_field = gl.Children(3);
 pth_field = gl.Children(4);
-notes = gl.Children(10);
+notes = gl.Children(11);
 
 %% Main
 while f.UserData.state ~= 3
 
-    if f.UserData.state == 1
-
-        if f.UserData.run_type == 4 % just stream the data
-            ax.Title.String = 'ive streaming, not saving...';
-            s.configureCallback('byte',up_every, @(src,evt) justStream(src, evt, ax, up_every));
-            while f.UserData.state ~= 2 || f.UserData.state ~= 3
-                pause(0.1)
+    if f.UserData.run_type == 4 % just stream the data  
+        s.flush;
+        write_serial(s,teensy_reset); % resetting teensy        
+        ax.Title.String = 'live streaming, not saving...';
+        s.configureCallback('byte',up_every, @(src,evt) justStream(src, evt, ax, up_every));
+        present = 1;
+        while present 
+            pause(0.1)
+            if f.UserData.state == 2 || f.UserData.state == 3
+                present = 0;
+                ax.Title.String = 'Waiting to start';
+                fprintf('\nAborted...\n')
+                configureCallback(s,'off');
+                f.UserData.run_type = 0;
             end
         end
+        continue
+
+    elseif f.UserData.state == 1
 
         trl_cntr = 0;
+        present = 1;
 
         %% setup data files
         id = [id_field.Value '_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
-        id_field.Value = id;
         save_pth = pth_field.Text;
         exp_pth = [save_pth '/' id];
         mkdir(exp_pth);
@@ -88,19 +101,15 @@ while f.UserData.state ~= 3
         data_fid_notes = fopen([exp_pth '/data_notes.csv'],'w');
         fprintf(data_fid_notes,id);
 
+        s.flush;
+        write_serial(s,teensy_reset); % resetting teensy   
         s.configureCallback('byte',up_every, @(src,evt) plotSaveDataAvailable(src, evt, data_fid_stream, ax, up_every,f));
-
-        write_serial(s,teensy_reset); % resetting teensy
-        % pause for initial baseline
-        pause(baseln);
 
         % send triggers
         write_serial(s,teensy_trigger);
         pause(0.1)
 
-        fprintf(data_fid_notes,['\nRun Begin at ' char(datetime('now','Format','HH:mm:ss'))]);
-
-        present = 1;
+        fprintf(data_fid_notes,['\nRun Began at ' char(datetime('now','Format','HH:mm:ss'))]);
 
         while present
 
@@ -110,13 +119,14 @@ while f.UserData.state ~= 3
 
             trl_cntr = trl_cntr + 1;
 
-            fprintf(data_fid_notes,['\n Trial ' num2str(trl_cntr) ' ' char(datetime('now','Format','HH:mm:ss'))]);
-
             if f.UserData.run_type == 1 % detection task
 
                 if trl_cntr == 1
                     fprintf(data_fid_notes,'\nDetection Task');
+                    pause(baseln)
                 end
+
+                fprintf(data_fid_notes,['\n Trial ' num2str(trl_cntr) ' ' char(datetime('now','Format','HH:mm:ss'))]);
 
                 trial_type = trls(trl_cntr);
                 if trial_type > 0
@@ -146,13 +156,14 @@ while f.UserData.state ~= 3
 
                 if trl_cntr == 1
                     fprintf(data_fid_notes,'\nPairing Task');
+                    pause(baseln)
                 end
 
                 trial_type = trls(trl_cntr);
                 cur_amp = sig_amps_12bit(trial_type);
                 msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' num2str(cur_amp) ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
                 ax.Title.String = ['Trial ' num2str(trl_cntr) ', Go, Amp = ' num2str(cur_amp)];
-
+                
                 % set waveform parameters
                 write_serial(s,msg_out);
                 write_serial(s,teensy_pair_trial);
@@ -161,49 +172,55 @@ while f.UserData.state ~= 3
 
                 if trl_cntr == 1
                     fprintf(data_fid_notes,'\nLick for Reward Task');
-                    msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
+                    msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' lick_pause_time '>'];
                     write_serial(s,msg_out)
+                    pause(baseln)
                 end
 
                 write_serial(s,teensy_lick_trial);
                 ax.Title.String = ['N Rewards = ' num2str(trl_cntr)];
-
-                while ~f.UserData.Done
-                    % wait for end of trial message from teensy before moving on
-                    % but make sure the serial callback has room to breath:
-                    pause(0.1)
-                end
-
-                fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
-
-                % begin ITI
-                iti = randi(itis,1);
-                pause(iti)
-
-                trl_cntr = trl_cntr + 1;
-
-                if f.UserData.state == 2 || trl_cntr > n_trials %% end the run
-                    ax.Title.String = 'Waiting to start';
-                    fprintf('\nAborted...\n')
-                    present = 0;
-                    f.UserData.state = 2;
-                    configureCallback(s,'off');
-                    kill_run(s,data_fid_stream,data_fid_notes,notes,max(itis));
-                elseif f.UserData.state == 3
-                    present = 0;
-                end
+                fprintf(data_fid_notes,['\n' char(datetime('now','Format','HH:mm:ss')) ' Reward ' num2str(trl_cntr)] );
+                
 
             end
+
+            while ~f.UserData.Done
+                % wait for end of trial message from teensy before moving on
+                % but make sure the serial callback has room to breath:
+                pause(0.1)
+                if f.UserData.state == 2 || f.UserData.state == 3
+                    break
+                end
+            end
+            
+            f.UserData.Done = 0;
+
+            fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
+
+            if f.UserData.state == 2 || trl_cntr > n_trials %% end the run
+                ax.Title.String = 'Waiting to start';
+                fprintf('\nAborted...\n')
+                present = 0;
+                configureCallback(s,'off');
+                kill_run(s,data_fid_stream,data_fid_notes,notes);
+            elseif f.UserData.state == 3
+                present = 0;
+            end
+
+            % begin ITI
+            iti = randi(itis,1);
+            pause(iti)
+
         end
     end
+    pause(0.1)
+end
 
-    %% end program
-    try exist(data_fid_stream,'var')
-        kill_program(s,notes,data_fid_stream,data_fid_notes);
-    catch
-        kill_program(s,notes);
-    end
-
+%% end program
+try exist(data_fid_stream,'var')
+    kill_program(s,notes,data_fid_stream,data_fid_notes);
+catch
+    kill_program(s);
 end
 
 end
@@ -216,11 +233,11 @@ function[] = kill_run(s,fid1,fid2,notes)
 write(s,'<S,1>','string');
 write(s,'<S,0>','string');
 
+fprintf(fid2,['\nRun Ended at ' char(datetime('now','Format','HH:mm:ss'))]);
+
 for i = 1:size(notes.Value,1)
     fprintf(fid2,'%s\n',notes.Value{i});
 end
-
-fprintf(fid2,['\nRun Ended at ' char(datetime('now','Format','HH:mm:ss'))]);
 
 fclose(fid1);
 fclose(fid2);
@@ -232,11 +249,10 @@ function[] = kill_program(s,notes,fid1,fid2)
 
 fprintf('\nQuitting...\n')
 
-for i = 1:size(notes.Value,1)
-    fprintf(fid2,'%s\n',notes.Value{i});
-end
-
-if nargin > 2
+if nargin > 1
+    for i = 1:size(notes.Value,1)
+        fprintf(fid2,'%s\n',notes.Value{i});
+    end
     % close files
     fclose(fid1);
     fclose(fid2);

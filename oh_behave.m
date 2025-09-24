@@ -46,8 +46,8 @@ teensy_reset =      '<S,1>';
 teensy_go_trial =   '<S,2>';
 teensy_nogo_trial = '<S,3>';
 teensy_trigger =    '<S,4>';
-teensy_pair_trial =   '<S,8>';
-teensy_lick_trial =   '<S,9>';
+teensy_pair_trial = '<S,8>';
+teensy_lick_trial = '<S,9>';
 
 % connect to teensy
 s = serialport(serial_port,115200);

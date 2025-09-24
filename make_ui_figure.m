@@ -11,7 +11,14 @@ fig = uifigure('Position',[round(wd*0.25),round(ht*0.25),round(wd*0.67),round(ht
 
 fig.UserData = struct('trialOutcome',0,'run_type',1,'state',0,'Done',0);
 
-gl = uigridlayout(fig,[10 15],'BackgroundColor','black');
+tg = uitabgroup(fig,'Position',[0,0,round(wd*0.67),round(ht*0.67)]);
+t1 = uitab(tg,'Title','Data','BackgroundColor','black');
+t2 = uitab(tg,'Title',"Parameters",'BackgroundColor','black');
+
+gl = uigridlayout(t1,[10 15],'BackgroundColor','black');
+gl2 = uigridlayout(t2,[10 15],'BackgroundColor','black');
+
+%% main data tab
 
 %% main axes
 ax = axes(gl);
@@ -199,8 +206,9 @@ close_btn = uibutton(gl,...
 close_btn.Layout.Row = 10;
 close_btn.Layout.Column = 19;
 
-%%
+%% parameter tab
 
+%% end main
 fontname(fig,'Arial');
 
 end

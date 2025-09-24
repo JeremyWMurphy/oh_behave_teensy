@@ -53,6 +53,8 @@ volatile bool trigEnd = false;
 volatile uint32_t trigT = 0;
 
 volatile bool giveReward = false;
+volatile bool pauseRewardStart = false;
+volatile uint32_t pauseRewardT = 0;      
 
 volatile uint trialOutcome = 0;
 const uint HIT = 1;
@@ -372,7 +374,7 @@ void waveWrite(){
     }
     stimEnd = true; 
   }
-}
+} // end waveWrite
 
 void fireTrig(){
 
@@ -399,6 +401,7 @@ void fireTrig(){
 }
 
 void justReward(){
+  // so you can just push a button and get a typical reward
 
     if (dispStart){
       dispT = loopCount;
@@ -414,17 +417,13 @@ void justReward(){
     } else {
       digitalWrite(valveChan1,HIGH);
     }
-
 }
 
-void pairing(){
+void pairing(){ // stimulus-reward pairing, not contingent on animal's response
 
-  // pairing but with Go No-Go trial structure
+  // GoNo-Go trial structure
   if (enforceNoLick && !noLickEnd){
-    
-    stimStart = false; // dont start stim or response period
-    respStart = false;
-    
+        
     if (noLickStart){ // initial starting time of no lick period
       noLickT = loopCount;
       noLickStart = false;
@@ -433,12 +432,10 @@ void pairing(){
     if (lickVal == 1){ // if the fucker licks, reset the clock
       noLickT = loopCount;
     } else if (loopCount - noLickT >= noLickLen){ // if we made it without licking
-      stimStart = true; // start stim
-      respStart = true; // start response
       noLickEnd = true; // end no licking period
     }
     
-  } else {
+  } else { // begin stimulus and response periods
 
     if (stimStart){
       stimT = loopCount;
@@ -458,24 +455,23 @@ void pairing(){
       trialOutcome = HIT;
     }
 
-    if (stimEnd && respEnd){ // if stim and resp window are both over, evaluate outcome
+    if (stimEnd && respEnd){ // if stim and resp window are both over give reward
 
       if (dispStart){
         dispT = loopCount;
         dispStart = false;
       }
 
-      if (loopCount - dispT > valveLen){  // end of reward dispens, reset things
-        
+      if (loopCount - dispT > valveLen){  // end of reward dispense, reset things        
         digitalWrite(valveChan1,LOW);
         
         for (int i = 0; i< 4; i++){
           stimOn[i] = true;
           inBase[i] = true;
         }
+
         stimEnd = false;
         respEnd = false;
-        hasResponded = false;
         noLickEnd = false;
         respStart = true;
         dispStart = true;
@@ -490,32 +486,45 @@ void pairing(){
       }
     }
   }
-}
+} // end pairing
 
 void lickForReward(){
 
+  // give a reward if animal licks spout
+
   if (lickVal==HIGH && dispStart){ // if there's a lick and we're ready to dispense the reward
     giveReward = true;
+    trialOutcome = HIT;
   }
 
-  if (giveReward){
-    if (dispStart){
-      dispT = loopCount;
-      dispStart = false;
-      trialOutcome = HIT;
+  if (giveReward){ // now they've licked
+
+    if (pauseRewardStart){ // wait some time before dispensing reward
+      pauseRewardStart = false;
+      pauseRewardT = loopCount;      
     }
 
-    if (loopCount - dispT > valveLen){  // end of reward dispens, reset things    
-      digitalWrite(valveChan1,LOW);
-      dispStart = true;
-      giveReward = false;
-      State = 0;
-      trialOutcome = 0;
+    if (loopCount - pauseRewardT > waveBase[0]){  // end of reward dispense, reset things *Important: Setting reward pause based on analog channel 0's baseline time    
       
-    } else {
-      digitalWrite(valveChan1,HIGH);
+      if (dispStart){
+        dispT = loopCount;
+        dispStart = false;
+        
+      }
 
-    } 
+      if (loopCount - dispT > valveLen){  // end of reward dispens, reset things    
+        digitalWrite(valveChan1,LOW);
+        dispStart = true;
+        pauseRewardStart = true;
+        giveReward = false;
+        State = 0;
+        trialOutcome = 0;
+      
+      } else {
+        digitalWrite(valveChan1,HIGH);
+
+      } 
+    }
   }
 }
 

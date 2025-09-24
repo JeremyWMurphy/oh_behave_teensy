@@ -9,14 +9,14 @@ ht = ss(4);
 
 fig = uifigure('Position',[round(wd*0.25),round(ht*0.25),round(wd*0.67),round(ht*0.67)],'Color','black');
 
-fig.UserData = struct('trialOutcome',0,'State',0,'Done',0,'run_type',1);
+fig.UserData = struct('trialOutcome',0,'run_type',1,'state',0,'Done',0);
 
 gl = uigridlayout(fig,[10 20],'BackgroundColor','black');
 
 %% main axes
 ax = axes(gl);
 ax.Layout.Row = [2 10];
-ax.Layout.Column = [4 15];
+ax.Layout.Column = [5 15];
 ax.NextPlot = 'add';
 ax.Color = [0 0 0];
 ax.XColor = [1 1 1];
@@ -76,7 +76,7 @@ pth_btn = uibutton(gl,...
 pth_btn.Layout.Row = 1;
 pth_btn.Layout.Column = 5;
 
-%% trial type toggle (Lick, Pair, Detect)
+%% trial type toggle (Lick, Pair, Detect, live stream)
 
 % display and set save path field
 run_txt = uilabel(gl, ...
@@ -111,6 +111,14 @@ tt3_btn = uibutton(gl,...
 tt3_btn.Layout.Row = 2;
 tt3_btn.Layout.Column = 4;
 
+tt4_btn = uibutton(gl,...
+    'BackgroundColor',[0 0 0],...
+    'Text', 'Live',...
+    'FontColor',[1 1 1],...
+    "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,4,ax));
+tt4_btn.Layout.Row = 2;
+tt4_btn.Layout.Column = 5;
+
 
 %% notes text box
 
@@ -125,29 +133,29 @@ edt.ValueChangedFcn = @(src,event) update_id(edt,notes);
 %% run start, run end, quit buttons
 
 % start button
-strt_btn = uibutton(gl,'state',...
+strt_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'Begin',...
     'FontColor',[1 1 1],...
-    'Value',0);
+     "ButtonPushedFcn", @(src,event) flowControl(fig,1));
 strt_btn.Layout.Row = 10;
 strt_btn.Layout.Column = 1;
 
 % stop button
-stp_btn = uibutton(gl,'state',...
+stp_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'End',...
     'FontColor',[1 1 1],...
-    'Value',0);
+     "ButtonPushedFcn", @(src,event) flowControl(fig,2));
 stp_btn.Layout.Row = 10;
 stp_btn.Layout.Column = 2;
 
 % quit button
-quit_btn = uibutton(gl,'state',...
+quit_btn = uibutton(gl,...
     'BackgroundColor',[0 0 0],...
     'Text', 'Quit',...
     'FontColor',[1 1 1],...
-    'Value',0);
+    "ButtonPushedFcn", @(src,event) flowControl(fig,3));
 
 quit_btn.Layout.Row = 10;
 quit_btn.Layout.Column = 3;
@@ -315,12 +323,18 @@ function ttButtonPushed(fig,tt,ax)
     % set run type
     fig.UserData.run_type = tt;
     if tt == 1
-        ax.Title.String = 'Detection Run ... ';
+        ax.Title.String = 'Detection Run... ';
     elseif tt == 2
-        ax.Title.String = 'Pairing Run ... ';
+        ax.Title.String = 'Pairing Run... ';
     elseif tt == 3
-        ax.Title.String = 'Lick-for-reward Run ... ';
+        ax.Title.String = 'Lick-for-reward Run... ';
+    elseif tt == 4
+        ax.Title.String = 'Lick Stream... ';
     end
+end
+
+function flowControl(fig,st)
+  fig.UserData.state = st;
 end
 
 

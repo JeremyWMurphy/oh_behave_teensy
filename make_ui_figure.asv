@@ -9,7 +9,7 @@ ht = ss(4);
 
 fig = uifigure('Position',[round(wd*0.25),round(ht*0.25),round(wd*0.67),round(ht*0.67)],'Color','black');
 
-fig.UserData = struct('trialOutcome',0,'run_type',1,'state',0,'Done',0);
+fig.UserData = struct('trialOutcome',0,'run_type',1,'state',0,'Done',0,'params',params);
 
 tg = uitabgroup(fig,'Position',[0,0,round(wd*0.67),round(ht*0.67)]);
 t1 = uitab(tg,'Title','Data','BackgroundColor','black');
@@ -278,7 +278,7 @@ duration_txt.FontSize = 16;
 duration_txt.FontColor = [1 1 1];
 duration_txt.HorizontalAlignment = 'right';
 
-duration_edt = uieditfield(gl2,'numeric','Value',params.wave.pulse_len, ...
+duration_edt = uieditfield(gl2,'numeric','Value',20, ...
     'BackgroundColor',[0 0.2 0],...
     'FontColor',[1 1 1]);
 duration_edt.Layout.Row = rw;
@@ -295,7 +295,7 @@ ipi_txt.FontSize = 16;
 ipi_txt.FontColor = [1 1 1];
 ipi_txt.HorizontalAlignment = 'right';
 
-ipi_edt = uieditfield(gl2,'numeric','Value',params.wave.pulse_intrvl, ...
+ipi_edt = uieditfield(gl2,'numeric','Value',0, ...
     'BackgroundColor',[0 0.2 0],...
     'FontColor',[1 1 1]);
 ipi_edt.Layout.Row = rw;
@@ -312,7 +312,7 @@ np_txt.FontSize = 16;
 np_txt.FontColor = [1 1 1];
 np_txt.HorizontalAlignment = 'right';
 
-np_edt = uieditfield(gl2,'numeric','Value',params.wave.pulse_reps, ...
+np_edt = uieditfield(gl2,'numeric','Value',0, ...
     'BackgroundColor',[0 0.2 0],...
     'FontColor',[1 1 1]);
 np_edt.Layout.Row = rw;
@@ -329,7 +329,7 @@ base_txt.FontSize = 16;
 base_txt.FontColor = [1 1 1];
 base_txt.HorizontalAlignment = 'right';
 
-base_edt = uieditfield(gl2,'numeric','Value',params.wave.pulse_base, ...
+base_edt = uieditfield(gl2,'numeric','Value',0, ...
     'BackgroundColor',[0 0.2 0],...
     'FontColor',[1 1 1]);
 base_edt.Layout.Row = rw;

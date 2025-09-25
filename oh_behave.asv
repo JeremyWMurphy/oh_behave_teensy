@@ -12,6 +12,7 @@ sig_amps = [0.62 0.8 1 2 4];
 prcnt_amps = [0.2 0.2 0.2 0.2 0.2];
 lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward
 
+
 % teensy waveform stimulus parameters
 chan = '2';
 pulse_type = '0';
@@ -57,6 +58,7 @@ s=[];
 outcomes = {'Hit','Miss','CW','FA'};
 
 %% package parameters
+
 params.trial = struct('baseln',baseln,'itis',itis,'n_trials',n_trials,'prcnt_go',prcnt_go,'sig_amps',sig_amps,'lick_pause_time',lick_pause_time);
 params.wave = struct('chan',str2num(chan),'pulse_type',str2num(pulse_type),'pulse_len',str2num(pulse_len),'pulse_amp',str2num(pulse_amp), ...
     'pulse_intrvl',str2num(pulse_intrvl),'pulse_reps',str2num(pulse_reps),'pulse_base',str2num(pulse_base));
@@ -66,7 +68,7 @@ f = make_ui_figure(teensy_fs,n_sec_disp,s,params);
 
 % get fig objs
 tbs = get(f,'Children');
-gl = tbs(1).Children(1).Children(1);
+t1 = gl.Children(1)
 ax = gl.Children(1);
 id_field = gl.Children(3);
 pth_field = gl.Children(4);
@@ -124,10 +126,6 @@ while f.UserData.state ~= 3
             end
 
             trl_cntr = trl_cntr + 1;
-
-            % set stim based on what's in the parameter tab group --
-            % currently pulse_amp will do nothing
-            [chan,pulse_type,pulse_len,pulse_amp,pulse_intrvl,pulse_reps,pulse_base] = get_wave_params(f);
 
             if f.UserData.run_type == 1 % detection task
 
@@ -189,7 +187,8 @@ while f.UserData.state ~= 3
 
                 write_serial(s,teensy_lick_trial);
                 ax.Title.String = ['N Rewards = ' num2str(trl_cntr)];
-                fprintf(data_fid_notes,['\n' char(datetime('now','Format','HH:mm:ss')) ' Reward ' num2str(trl_cntr)] );          
+                fprintf(data_fid_notes,['\n' char(datetime('now','Format','HH:mm:ss')) ' Reward ' num2str(trl_cntr)] );
+                
 
             end
 

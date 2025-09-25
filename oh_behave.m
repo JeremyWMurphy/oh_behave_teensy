@@ -1,7 +1,7 @@
 function [] = oh_behave()
 
 % parameters
-teensy_fs = 5000;
+teensy_fs = 2000;
 
 % experiment parameters
 baseln = 5; % length of pause at begining of each run
@@ -13,19 +13,19 @@ prcnt_amps = [0.2 0.2 0.2 0.2 0.2];
 lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward
 
 % teensy waveform stimulus parameters
-chan = '2';
+chan = '0';
 pulse_type = '0';
 pulse_len = '20'; % ms
 pulse_amp = '0';
-pulse_intrvl = '0';
+pulse_intrvl = '20';
 pulse_reps = '3';
 pulse_base = '0';
 % stim set message structure: msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
 serial_port = 'COM3';
-up_every = 8000; % number of bytes to read in at a time
-n_sec_disp = 10; % number of seconds to display on the graph
+up_every = 5000; % number of bytes to read in at a time
+n_sec_disp = 20; % number of seconds to display on the graph
 
 %% make trial structure
 sig_amps_12bit = map_jm(sig_amps,0,5,0,4095);
@@ -49,9 +49,8 @@ teensy_pair_trial = '<S,8>';
 teensy_lick_trial = '<S,9>';
 
 % connect to teensy
-% s = serialport(serial_port,115200);
-% pause(1);
-s=[];
+s = serialport(serial_port,115200);
+pause(1);
 
 % task outcomes
 outcomes = {'Hit','Miss','CW','FA'};
@@ -93,7 +92,7 @@ while f.UserData.state ~= 3
         end
         continue
 
-    elseif f.UserData.state == 1
+    elseif f.UserData.state == 1 % beginning of a run
 
         trl_cntr = 0;
         present = 1;
@@ -111,24 +110,26 @@ while f.UserData.state ~= 3
         write_serial(s,teensy_reset); % resetting teensy   
         s.configureCallback('byte',up_every, @(src,evt) plotSaveDataAvailable(src, evt, data_fid_stream, ax, up_every,f));
 
+        % set stim params based on what's in the parameter tab group --
+        % currently pulse_amp will do nothing
+        [chan,pulse_type,pulse_len,pulse_amp,pulse_intrvl,pulse_reps,pulse_base] = get_wave_params(f);
+        % set trial params based on what's in the parameter tab group --
+        [n_trials,baseln,itis,lick_pause_time] = get_trial_params(f);
+
         % send triggers
         write_serial(s,teensy_trigger);
         pause(0.1)
 
         fprintf(data_fid_notes,['\nRun Began at ' char(datetime('now','Format','HH:mm:ss'))]);
 
-        while present
+        while present % trial loop
 
             if trl_cntr > n_trials
                 present = 0;
             end
 
             trl_cntr = trl_cntr + 1;
-
-            % set stim based on what's in the parameter tab group --
-            % currently pulse_amp will do nothing
-            [chan,pulse_type,pulse_len,pulse_amp,pulse_intrvl,pulse_reps,pulse_base] = get_wave_params(f);
-
+           
             if f.UserData.run_type == 1 % detection task
 
                 if trl_cntr == 1
@@ -136,20 +137,18 @@ while f.UserData.state ~= 3
                     pause(baseln)
                 end
 
-                fprintf(data_fid_notes,['\n Trial ' num2str(trl_cntr) ' ' char(datetime('now','Format','HH:mm:ss'))]);
-
                 trial_type = trls(trl_cntr);
                 if trial_type > 0
                     is_go = true;
                     cur_amp = sig_amps_12bit(trial_type);
                     msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' num2str(cur_amp) ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
                     ax.Title.String = ['Trial ' num2str(trl_cntr) ', Go, Amp = ' num2str(cur_amp)];
-                    fprintf(data_fid_notes,[', Go Trial, Amp = ' num2str(cur_amp)] );
+                    fprintf(data_fid_notes,['\n Trial ' num2str(trl_cntr) ' ' char(datetime('now','Format','HH:mm:ss')) ', Go Trial, Amp = ' num2str(cur_amp)]);
                 else
                     is_go = false;
                     msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',0,' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
                     ax.Title.String = ['Trial ' num2str(trl_cntr) ', NoGo, Amp = 0'];
-                    fprintf(data_fid_notes,', NoGo Trial, Amp = 0');
+                    fprintf(data_fid_notes,['\n Trial ' num2str(trl_cntr) ' ' char(datetime('now','Format','HH:mm:ss')) ', NoGo Trial, Amp = 0']);
                 end
 
                 % set waveform parameters
@@ -182,13 +181,14 @@ while f.UserData.state ~= 3
 
                 if trl_cntr == 1
                     fprintf(data_fid_notes,'\nLick for Reward Task');
-                    msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' lick_pause_time '>'];
+                    msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' num2str(lick_pause_time) '>'];
                     write_serial(s,msg_out)
                     pause(baseln)
+                else
+                    ax.Title.String = ['Rewards Given = ' num2str(trl_cntr-1)];
                 end
 
-                write_serial(s,teensy_lick_trial);
-                ax.Title.String = ['N Rewards = ' num2str(trl_cntr)];
+                write_serial(s,teensy_lick_trial);                
                 fprintf(data_fid_notes,['\n' char(datetime('now','Format','HH:mm:ss')) ' Reward ' num2str(trl_cntr)] );          
 
             end
@@ -206,11 +206,20 @@ while f.UserData.state ~= 3
 
             fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
 
-            if f.UserData.state == 2 || trl_cntr > n_trials %% end the run
+            if f.UserData.state == 2  %% end the run
                 ax.Title.String = 'Waiting to start';
-                fprintf('\nAborted...\n')
+                fprintf('\nAbort...')
                 present = 0;
                 configureCallback(s,'off');
+                kill_run(s,data_fid_stream,data_fid_notes,notes);
+            elseif trl_cntr > n_trials
+                ax.Title.String = 'Task Complete';
+                pause(3)
+                ax.Title.String = 'Waiting to start';
+                fprintf('\nEnd of run...')
+                present = 0;
+                configureCallback(s,'off');
+                f.UserData.state = 2;
                 kill_run(s,data_fid_stream,data_fid_notes,notes);
             elseif f.UserData.state == 3
                 present = 0;

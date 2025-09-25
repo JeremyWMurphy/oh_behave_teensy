@@ -2,7 +2,7 @@
 #include <Adafruit_MCP4728.h>
 #include <Wire.h>
 
-const uint Fs = 5000; // sampling rate
+const uint Fs = 2000; // sampling rate
 
 const bool enforceNoLick = true;
 

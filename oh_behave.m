@@ -55,10 +55,9 @@ teensy_trigger =    '<S,4>';
 teensy_pair_trial = '<S,8>';
 teensy_lick_trial = '<S,9>';
 
-% % connect to teensy
-% s = serialport(serial_port,115200);
-% pause(1);
-s=[];
+% connect to teensy
+s = serialport(serial_port,115200);
+pause(1);
 
 %% package parameters to send to gui figure
 params.trial = struct('baseln',baseln,'itis',itis,'n_trials',n_trials,'prcnt_go',prcnt_go,'sig_amps',sig_amps,'lick_pause_time',lick_pause_time);
@@ -180,7 +179,12 @@ while f.UserData.state ~= 3
                 end
 
                 trial_type = trls(trl_cntr);
-                cur_amp = sig_amps_12bit(trial_type);
+                if trial_type > 0
+                    cur_amp = sig_amps_12bit(trial_type);
+                else
+                    cur_amp = 0;
+                end
+                
                 msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' num2str(cur_amp) ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
                 ax.Title.String = ['Trial ' num2str(trl_cntr) ', Go, Amp = ' num2str(cur_amp)];
                 
@@ -220,9 +224,6 @@ while f.UserData.state ~= 3
             % reset Done variable -- this meesed me up for a while
             f.UserData.Done = 0;
 
-            % print the outcome of the trial to file
-            fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
-
             % color GUI outcome text based on this trials outcome
             if f.UserData.trialOutcome == 1
                 hit_txt.FontColor = [0 1 1];
@@ -258,6 +259,9 @@ while f.UserData.state ~= 3
             iti = randi(itis,1);
             pause(iti)
 
+            % print the outcome of the trial to file
+            fprintf(data_fid_notes,[', Outcome = ' num2str(f.UserData.trialOutcome)'] );
+
             % Change all outcome text back to gray
             hit_txt.FontColor = [0.5 0.5 0.5];
             miss_txt.FontColor = [0.5 0.5 0.5];
@@ -287,7 +291,7 @@ function[] = kill_run(s,fid1,fid2,notes)
 write(s,'<S,1>','string');
 write(s,'<S,0>','string');
 
-fprintf(fid2,['\nRun Ended at ' char(datetime('now','Format','HH:mm:ss'))]);
+fprintf(fid2,['\nRun Ended at ' char(datetime('now','Format','HH:mm:ss')) '\n']);
 
 for i = 1:size(notes.Value,1)
     fprintf(fid2,'%s\n',notes.Value{i});

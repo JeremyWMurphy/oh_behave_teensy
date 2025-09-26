@@ -1,7 +1,6 @@
 function [] = oh_behave()
 
-%% parameters
-
+% parameters
 teensy_fs = 2000; % teensy sample rate, Hz
 
 % experiment parameters
@@ -13,14 +12,15 @@ sig_amps = [0.62 0.8 1 2 4]; % amplitudes of stimuli, Volts
 prcnt_amps = [0.2 0.2 0.2 0.2 0.2]; % proportion of different amplitudes to present - needs to add to 1
 lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward, this is usually fixed during detection, but may be used for other shaping runs
 
-% initial teensy waveform stimulus parameters
+% teensy waveform stimulus parameters
 chan = '0';
-pulse_type = '0'; % 0 = whale, 1 = square, 2 = rampup, 3 = rampdown, 4 = pyramid
+pulse_type = '0';
 pulse_len = '20'; % ms
-pulse_amp = '0'; % uint 12 bit
-pulse_intrvl = '20'; % ms
-pulse_reps = '3'; 
-pulse_base = '0'; % ms
+pulse_amp = '0';
+pulse_intrvl = '20';
+pulse_reps = '3';
+pulse_base = '0';
+% stim set message structure: msg_out = ['<W,' chan ',' pulse_type ',' pulse_len ',' pulse_amp ',' pulse_intrvl ',' pulse_reps ',' pulse_base '>'];
 
 % device parameters
 serial_port = 'COM3';

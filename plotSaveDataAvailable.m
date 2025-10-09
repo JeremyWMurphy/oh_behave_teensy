@@ -30,6 +30,9 @@ if ~isempty(data)
     if ~isempty(ot)
         f.UserData.trialOutcome = data(ot,4);
         f.UserData.Done = 1;
+    else
+        f.UserData.trialOutcome = data(ot,4);
+        f.UserData.Done = 0;
     end
 
 end

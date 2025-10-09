@@ -221,8 +221,8 @@ while f.UserData.state ~= 3
                 end
             end
             
-            % reset Done variable -- this meesed me up for a while
-            f.UserData.Done = 0;
+            % reset Done variable -- this messed me up for a while
+            f.UserData.Done = 0; % i think userdata.done is still messing this up
 
             % color GUI outcome text based on this trials outcome
             if f.UserData.trialOutcome == 1

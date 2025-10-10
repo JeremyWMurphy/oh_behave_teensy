@@ -80,6 +80,8 @@ cw_txt = gl.Children(21);
 fa_txt = gl.Children(22);
 
 %% Main
+trial_is_done = 0;
+
 while f.UserData.state ~= 3
 
     if f.UserData.run_type == 4 % just stream the data  
@@ -212,7 +214,8 @@ while f.UserData.state ~= 3
 
             %% remaining general trial structure -- the following stuff is common to all run types 
             %% (i.e., wait for trial end, get trial outcome, record outcome, do ITI) 
-            while ~f.UserData.Done
+            while ~trial_is_done
+                trial_is_done = f.UserData.Done;
                 % wait for end of trial message from teensy before moving on
                 % but make sure the serial callback has room to breath:
                 pause(0.1)
@@ -220,9 +223,8 @@ while f.UserData.state ~= 3
                     break
                 end
             end
-            
-            % reset Done variable -- this messed me up for a while
-            f.UserData.Done = 0; % i think userdata.done is still messing this up
+                        
+             trial_is_done = 0; 
 
             % color GUI outcome text based on this trials outcome
             if f.UserData.trialOutcome == 1

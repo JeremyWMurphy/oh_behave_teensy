@@ -1,6 +1,7 @@
 function fig = make_ui_figure(fs,n_sec_disp,s,params)
 
 default_id = 'NA';
+pth_main  = 'C:\Users\Jeremy\Documents\';
 
 %% main figure
 ss = get(0,'screensize');
@@ -47,6 +48,13 @@ plot(ax,nan_vec,'g'); % wheel
 plot(ax,nan_vec,'c'); % frame raw
 plot(ax,nan_vec,'y'); % lick detector
 
+%% notes text box
+
+notes = uitextarea(gl,'Value','Notes Here ...');
+notes.Layout.Column = [1 4];
+notes.Layout.Row = [3 9];
+notes.BackgroundColor = [0 0 0];
+notes.FontColor = [0 1 0];
 %% set id name and save path
 
 % id label
@@ -67,7 +75,7 @@ edt.ValueChangedFcn = @(src,event) update_id(edt,notes);
 
 % display and set save path field
 pth_txt = uilabel(gl, ...
-    'Text','C:\Users\jeremy\Documents\Data_Temp\',...    
+    'Text',pth_main,...    
     'BackgroundColor',[0 0 0],...
     'FontColor',[1 1 1], ...
     'FontSize', 16);
@@ -123,14 +131,6 @@ tt4_btn = uibutton(gl,...
     "ButtonPushedFcn", @(src,event) ttButtonPushed(fig,4,ax));
 tt4_btn.Layout.Row = 2;
 tt4_btn.Layout.Column = 5;
-
-%% notes text box
-
-notes = uitextarea(gl,'Value','Notes Here ...');
-notes.Layout.Column = [1 4];
-notes.Layout.Row = [3 9];
-notes.BackgroundColor = [0 0 0];
-notes.FontColor = [0 1 0];
 
 %% run start, run end, quit buttons
 

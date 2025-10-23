@@ -4,12 +4,13 @@
 
 const uint Fs = 2000; // sampling rate
 
-const bool enforceNoLick = true;
+const bool enforceNoLick = true; // require the animal to not lick for n secs befor the next trial starts, n is set below by noLickLen
+const bool waitForNextFrame = true;
 
 // time lengths
 const uint trigLen = Fs/2; // trigger lenght in seconds
 const uint respLen = Fs*2; // how long from stim start is a response considered valid,
-const uint valveLen = Fs*0.25; // how long to open reward valve in samples
+const uint valveLen = Fs*1; // how long to open reward valve in samples
 const uint noLickLen = Fs*2; //seconds of no licking
 
 // channels
@@ -63,7 +64,6 @@ const uint CW = 3;
 const uint FA = 4;
 
 // waveform parameters to be set over serial for each of the 4 DAC channels
-
 volatile uint waveType[4] = {1,1,1,1}; // wave types: 0 = whale, 1 = square
 volatile uint waveDur[4] = {20,0,0,0}; // duration of pulse, fixed for whale right now, set via serial in ms, converted to sample points
 volatile uint waveAmp[4] = {0,0,0,0}; // max voltage amplitude, in 12bit - 0-4095 
@@ -95,6 +95,8 @@ volatile char msgCode;
 // Counters
 volatile uint32_t loopCount = 0;
 volatile uint32_t frameCount = 0;
+volatile uint32_t curFrame = 0; // for waiting for next frame to begin trial
+volatile bool frameWaitStart = true; // for waiting for next frame to begin trial
 
 // objs
 Adafruit_MCP4728 mcp;
@@ -201,9 +203,15 @@ void goNoGo(){
     if (lickVal == 1){ // if the fucker licks, reset the clock
       noLickT = loopCount;
     } else if (loopCount - noLickT >= noLickLen){ // if we made it without licking
-      stimStart = true; // start stim
-      respStart = true; // start response
-      noLickEnd = true; // end no licking period
+
+      if (waitForNextFrame && frameWaitStart){ // if we're waiting for the next frame to start
+        curFrame = frameCount;
+        frameWaitStart = false;
+      } else if (frameCount > curFrame){
+        stimStart = true; // start stim
+        respStart = true; // start response
+        noLickEnd = true; // end no licking period
+      }
     }
     
   } else {
@@ -224,6 +232,7 @@ void goNoGo(){
     if (loopCount - respT > respLen){
       respEnd = true;
     } else if (!hasResponded){
+
       if ((State == 2) && (lickVal == HIGH)){ // check for licks, if any, then HIT or FA, mark it, don't keep checking 
         trialOutcome = HIT;
         hasResponded = true;
@@ -260,11 +269,12 @@ void goNoGo(){
         }
         stimEnd = false;
         respEnd = false;
-        hasResponded = false;
+        hasResponded = false;  
         noLickEnd = false;
         respStart = true;
         dispStart = true;
         stimStart = true;
+        frameWaitStart = true;
         noLickStart = true;
         trialOutcome = 0;
         State = 0;

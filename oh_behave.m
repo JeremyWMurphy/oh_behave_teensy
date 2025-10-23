@@ -71,13 +71,15 @@ f = make_ui_figure(teensy_fs,n_sec_disp,s,params);
 tbs = get(f,'Children');
 gl = tbs(1).Children(1).Children(1);
 ax = gl.Children(1);
-id_field = gl.Children(4);
-pth_field = gl.Children(5);
-notes = gl.Children(2);
-hit_txt = gl.Children(19);
-miss_txt = gl.Children(20);
-cw_txt = gl.Children(21);
-fa_txt = gl.Children(22);
+axb = gl.Children(2);
+axc = gl.Children(3);
+id_field = gl.Children(6);
+pth_field = gl.Children(7);
+notes = gl.Children(4);
+hit_txt = gl.Children(21);
+miss_txt = gl.Children(22);
+cw_txt = gl.Children(23);
+fa_txt = gl.Children(24);
 
 %% Main
 trial_is_done = 0;
@@ -109,11 +111,10 @@ while f.UserData.state ~= 3
 
         %% setup data files
         id = [id_field.Value '_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
-        save_pth = pth_field.Text;
-        exp_pth = [save_pth id];
-        mkdir(exp_pth);
-        data_fid_stream = fopen([exp_pth '\data_stream.csv'],'w');
-        data_fid_notes = fopen([exp_pth '\data_notes.csv'],'w');
+        save_pth = [pth_field.Text '\' id];
+        mkdir(save_pth);
+        data_fid_stream = fopen([save_pth '\data_stream.csv'],'w');
+        data_fid_notes = fopen([save_pth '\data_notes.csv'],'w');
         fprintf(data_fid_notes,id);
 
         s.flush;
@@ -132,6 +133,12 @@ while f.UserData.state ~= 3
 
         fprintf(data_fid_notes,['\nRun Began at ' char(datetime('now','Format','HH:mm:ss'))]);
 
+        n_resp_types = [0 0 0 0]; % hits,misses,cws,fas
+        phit = zeros(2,numel(sig_amps));
+        axc.Children.XData = sig_amps;
+        axc.XLim = [0 sig_amps(end)];
+        axc.XTick = sig_amps;
+        
         while present % trial loop
 
             if trl_cntr > n_trials
@@ -229,12 +236,18 @@ while f.UserData.state ~= 3
             % color GUI outcome text based on this trials outcome
             if f.UserData.trialOutcome == 1
                 hit_txt.FontColor = [0 1 1];
+                n_resp_types(1) = n_resp_types(1)+1;
+                p_hit(1,trial_type) = phit(1,trial_type) + 1;
             elseif f.UserData.trialOutcome == 2
                 miss_txt.FontColor = [0 1 1];
+                n_resp_types(2) = n_resp_types(2)+1;
+                p_hit(2,trial_type) = phit(2,trial_type) + 1;
             elseif f.UserData.trialOutcome == 3
                 cw_txt.FontColor = [0 1 1];
+                n_resp_types(3) = n_resp_types(3)+1;
             elseif f.UserData.trialOutcome == 4
                 fa_txt.FontColor = [0 1 1];
+                n_resp_types(4) = n_resp_types(4)+1;
             end
 
             % print the outcome of the trial to file
@@ -264,15 +277,18 @@ while f.UserData.state ~= 3
             iti = randi(itis,1);
             pause(iti)
 
-
-
             % Change all outcome text back to gray
             hit_txt.FontColor = [0.5 0.5 0.5];
             miss_txt.FontColor = [0.5 0.5 0.5];
             cw_txt.FontColor = [0.5 0.5 0.5];
             fa_txt.FontColor = [0.5 0.5 0.5];
-           
 
+            axb.Children.YData = n_resp_types;
+            axb.Children.Labels = n_resp_types;
+            axb.XLim = [0 max(n_resp_types(:))];
+
+            axc.Children.YData = phit(1,:)./(phit(1,:)+phit(2,:));
+           
         end
     end
     pause(0.1)

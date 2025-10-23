@@ -71,7 +71,6 @@ edt = uieditfield(gl, 'Value',default_id, ...
     'FontColor',[1 1 1]);
 edt.Layout.Row = 1;
 edt.Layout.Column = [2 4];
-edt.ValueChangedFcn = @(src,event) update_id(edt,notes);
 
 % display and set save path field
 pth_txt = uilabel(gl, ...
@@ -206,7 +205,7 @@ hit_txt = uilabel(gl, ...
     'BackgroundColor',[0 0 0],...
     'FontColor',[0.5 0.5 0.5]);
 hit_txt.Layout.Row = 2;
-hit_txt.Layout.Column = [16 17];
+hit_txt.Layout.Column = [7 8];
 hit_txt.FontSize = 32;
 hit_txt.FontColor = [0.5 0.5 0.5];
 
@@ -215,7 +214,7 @@ miss_txt = uilabel(gl, ...
     'BackgroundColor',[0 0 0],...
     'FontColor',[0.5 0.5 0.5]);
 miss_txt.Layout.Row = 2;
-miss_txt.Layout.Column = [18 19];
+miss_txt.Layout.Column = [9 10];
 miss_txt.FontSize = 32;
 miss_txt.FontColor = [0.5 0.5 0.5];
 
@@ -223,8 +222,8 @@ cw_txt = uilabel(gl, ...
     'Text','CW',...    
     'BackgroundColor',[0 0 0],...
     'FontColor',[0.5 0.5 0.5]);
-cw_txt.Layout.Row = 4;
-cw_txt.Layout.Column = [16 17];
+cw_txt.Layout.Row = 2;
+cw_txt.Layout.Column = [11 12];
 cw_txt.FontSize = 32;
 cw_txt.FontColor = [0.5 0.5 0.5];
 
@@ -232,8 +231,8 @@ fa_txt = uilabel(gl, ...
     'Text','FA',...    
     'BackgroundColor',[0 0 0],...
     'FontColor',[0.5 0.5 0.5]);
-fa_txt.Layout.Row = 4;
-fa_txt.Layout.Column = [18 19];
+fa_txt.Layout.Row = 2;
+fa_txt.Layout.Column = [13 14];
 fa_txt.FontSize = 32;
 fa_txt.FontColor = [0.5 0.5 0.5];
 
@@ -491,6 +490,44 @@ lickp_edt = uieditfield(gl2,'numeric','Value',params.trial.lick_pause_time, ...
 lickp_edt.Layout.Row = rw;
 lickp_edt.Layout.Column = 10;
 
+%% performance axes
+
+axb = axes(gl);
+axb.Layout.Row = [2 4];
+axb.Layout.Column = [15 20];
+axb.NextPlot = 'add';
+axb.Color = [0 0 0];
+axb.XColor = [1 1 1];
+axb.YColor = [1 1 1];
+axb.XLabel.String = 'N';
+axb.YLim = [0 5];
+axb.XLim = [0 10];
+axb.Title.Color = [1 1 1];
+axb.Title.FontSize = 14;
+axb.Title.FontWeight = 'normal';
+axb.Title.String = 'Performance';
+
+axb.YTick = [1 2 3 4];
+axb.YTickLabel = {'Hits','Misses','CWs','FAs'};
+bh = barh(axb,[1 2 3 4],[1 2 3 4]);
+bh.EdgeColor = 'none';
+bh.FaceColor = 'flat';
+bh.CData = ([3, 252, 107; 252, 206, 3; 3, 240, 252; 252, 3, 74]./255)./3;
+
+axc = axes(gl);
+axc.Layout.Row = [5 8];
+axc.Layout.Column = [15 20];
+axc.NextPlot = 'add';
+axc.Color = [0 0 0];
+axc.XColor = [1 1 1];
+axc.YColor = [1 1 1];
+axc.XLabel.String = 'Stimulus Amplitude';
+axc.XTickLabelRotation = 90;
+axc.YLim = [0 1];
+axc.XLim = [0 6];
+axc.YLabel.String = 'P(hit)';
+plot(axc,[1 2 3 4 5],[0 0 0 0 0],'-sg'); % piezo signal
+
 end
 
 %% callbacks
@@ -498,11 +535,6 @@ end
 function pthButtonPushed(txt)
     selpath = uigetdir('C:\Users\jeremy\Desktop\Data_Temp\');
     txt.Text = selpath;
-end
-
-function update_id(edt,notes)
-    edt.Value = [edt.Value '_' char(datetime('now','format','yyyy-MM-dd''_T''HH-mm-ss'))];
-    notes.Value = edt.Value;
 end
 
 function rewButtonPushed(s)

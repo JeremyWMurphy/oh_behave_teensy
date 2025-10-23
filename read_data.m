@@ -1,4 +1,4 @@
-function [data,behavior] = read_data(verbose,pth)
+function [S] = read_data(verbose,pth)
 
 if nargin < 2
     pth = uigetdir();
@@ -13,60 +13,106 @@ fid = fopen([pth '\Data_Stream.csv']);
 data = fscanf(fid,'<%d,%d,%d,%d,%d,%d,%d,%d>\n');
 fclose(fid);
 
-r = mod(numel(data),8); % find an incomplete line at the end
+tnfo  = dir([pth '\*TSeries*']);
+tnfo  = dir([tnfo.folder '\' tnfo.name '\*.xml']);
+s = readstruct([tnfo.folder '\' tnfo.name]);
 
+% get frame period
+idx = find([s.PVStateShard.PVStateValue.keyAttribute]=="framePeriod");
+frame_period = s.PVStateShard.PVStateValue(idx).valueAttribute;
+im_fs = 1/frame_period;
+
+idx = find([s.PVStateShard.PVStateValue.keyAttribute]=="rastersPerFrame");
+n_frame_avg = s.PVStateShard.PVStateValue(idx).valueAttribute;
+
+im_fs = im_fs/n_frame_avg;
+
+%%
+
+r = mod(numel(data),8); % find an incomplete line at the end
 data = data(1:end-r);
 data = reshape(data,8,[])';
 strt = find(data(:,1)==0,1,'first'); % find teensy restart (this is always done at the start of the experiment)
 data = data(strt:end,:);
-
 data = array2table(data,'VariableNames',{'LoopNum','FrameNum','State','TrialOutcome','Ao0','Ao1','Licks','Wheel'});
 
-states = data.State;
-state_strts = find(diff(states)>0) + 1;
-state_ends = find(diff(states)<0);
-states_on = states(state_strts);
+frames = find(diff(data.FrameNum)==1) + 1;
+frames(diff(frames)<median(diff(frames))/2) = [];
+r = mod(numel(frames),n_frame_avg);
+frames = frames(1:end-r);
 
-go_nogo_trls = find(states(state_strts)==2 | states(state_strts)==3);
+im_fr_teensy = median(diff(frames))/Fs;
 
-behavior = zeros(numel(go_nogo_trls),6);
+frames = frames(1:n_frame_avg:end);
 
-for i = 1:numel(go_nogo_trls)
+outcomes = find(diff(data.TrialOutcome)>0) + 1;
 
-    ttype = states_on(go_nogo_trls(i));
+win = -2*Fs:Fs*3;
 
-    trl_idx_win = state_strts(go_nogo_trls(i)):state_ends(go_nogo_trls(i));
+behavior = nan(numel(outcomes),6);
 
-    behavior(i,1) = trl_idx_win(1);
+for i = 1:numel(outcomes)
+
+    ttype = data.TrialOutcome(outcomes(i));
+    behavior(i,1) = outcomes(i);
+
     behavior(i,2) = ttype;
 
-    if unique(diff(trl_idx_win)) ~= 1
-        fprintf('Trial Indexing is incorrect')
-        keyboard
-    end
+    twin = outcomes(i)+win;
 
-    outcome = data.TrialOutcome(trl_idx_win);
-    outcome = outcome(find(outcome>0,1,'first'));
+    if ttype < 3
 
-    behavior(i,3) = outcome;
+        amp = max(data.Ao0(twin));
+        behavior(i,3) = amp;
+        ponset = twin(find(data.Ao0(twin)>0,1,'first'))-1;
+        behavior(i,5) = find(abs(frames-ponset) == min(abs(frames-ponset))); % frame of piezo
 
-    if ttype == 2 % then it was a go trial
+        if ttype == 1
 
-        trl_stim_data = data.Ao0(trl_idx_win);
-        behavior(i,4) = max(trl_stim_data);        
-        stim_strt = trl_idx_win(find(diff(trl_stim_data)>0,1,'first'));
-        behavior(i,5) = stim_strt;
+            lick_ix = twin(find(data.Licks(twin)>0,1,'first'));
+            rt = (lick_ix-ponset)/Fs;
+            
+            if rt < 0.1
+                rt = NaN;
+                behavior(i,2) = 2;
+            end
 
-        if outcome == 1 % then it was a hit
-            response = find(data.Licks(stim_strt:end)>0,1,'first');
-            rt = response./Fs;
-            behavior(i,6) = rt;
+            behavior(i,4) = rt;
+            behavior(i,6) = find(abs(frames-lick_ix) == min(abs(frames-lick_ix))); % frame of first lick
+
         end
 
-    end
 
+    end
 end
 
+amp_levels = unique(behavior(behavior(:,2)==1|behavior(:,2)==2,3));
+amp_levels(amp_levels==0) = [];
+thresh_beh = zeros(numel(amp_levels),2);
+
+for i = 1:size(behavior,1)
+
+    if behavior(i,2) < 3
+        amp = find(behavior(i,3)==amp_levels);
+        
+        if behavior(i,2) == 1
+        
+            thresh_beh(amp,1) = thresh_beh(amp,1) + 1;
+
+        elseif behavior(i,2) == 2
+
+            thresh_beh(amp,2) = thresh_beh(amp,2) + 1;
+
+        end
+    end
+end
+
+phit = thresh_beh(:,1)./(thresh_beh(:,1)+thresh_beh(:,2));
+
+figure, hold on
+plot(1:numel(amp_levels),phit,'ok')
+mod_fit = fit((1:numel(amp_levels))',phit,'logistic');
+plot(0:numel(amp_levels),mod_fit(0:numel(amp_levels)),'r')
 
 if verbose
 
@@ -94,27 +140,35 @@ if verbose
     for i = 1:size(behavior,1)
         tmp = behavior(i,:);
         t_tmp = t(tmp(1));
-        line([t_tmp t_tmp],ax.YLim,'Color','c');
-        if tmp(2) == 2
-            text(t_tmp,5,'GO','Color',[1 1 1])
-        elseif tmp(2) == 3
-            text(t_tmp,5,'NOGO','Color',[1 1 1])
-        end
 
-        if tmp(3) == 1
+        if tmp(2) == 1
             text(t_tmp+2,7,'HIT','Color',[1 1 1]);
-        elseif tmp(3) == 2
+        elseif tmp(2) == 2
             text(t_tmp+2,7,'MISS','Color',[1 1 1]);
-        elseif tmp(3) == 3
+        elseif tmp(2) == 3
             text(t_tmp+2,7,'CW','Color',[1 1 1]);
-        elseif tmp(3) == 4
+        elseif tmp(2) == 4
             text(t_tmp+2,7,'FA','Color',[1 1 1]);
         end
     end
 
 end
 
-%behavior = array2table(behavior,{'StartFrame',})
+behavior = array2table(behavior,'VariableNames',{'teensy_index','outcome','piezo_amp','rt','piezo_frame','lick_frame'});
+
+S.raw_data = data;
+S.behavior = behavior;
+S.frames = frames;
+S.p_hit = phit;
+S.amp_levels = amp_levels;
+S.model_fit = mod_fit;
+S.fs = Fs;
+S.im_fs = im_fs;
+S.n_frame_avg = n_frame_avg;
+S.im_fr_teensy = im_fr_teensy;
+S.frame_period = frame_period;
+
+save([pth 'teensy_data.mat'],'S')
 
 
 

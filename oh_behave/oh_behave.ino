@@ -9,7 +9,7 @@ const bool enforceNoLick = true;
 // time lengths
 const uint trigLen = Fs/2; // trigger lenght in seconds
 const uint respLen = Fs*2; // how long from stim start is a response considered valid,
-const uint valveLen = Fs*1; // how long to open reward valve in samples
+const uint valveLen = Fs*0.25; // how long to open reward valve in samples
 const uint noLickLen = Fs*2; //seconds of no licking
 
 // channels

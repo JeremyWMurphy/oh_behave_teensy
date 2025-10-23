@@ -9,8 +9,8 @@ baseln = 5; % length of pause at begining of each run, sec
 itis = [7 10]; % inter-trial interval, sec
 n_trials = 300; % number of total trials to run
 prcnt_go = 0.9; % percentage of trials that are go trials
-sig_amps = [0.1 0.25 0.5 1 2 3 4]; % amplitudes of stimuli, Volts
-prcnt_amps = [0.1 0.1 0.1 0.1 0.2 0.2 0.2]; % proportion of different amplitudes to present - needs to add to 1
+sig_amps = [0.25 0.6 0.75 2 3]; % amplitudes of stimuli, Volts
+prcnt_amps = [0.2 0.2 0.2 0.2 0.2]; % proportion of different amplitudes to present - needs to add to 1
 lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward, this is usually fixed during detection, but may be used for other shaping runs
 
 % initial teensy waveform stimulus parameters

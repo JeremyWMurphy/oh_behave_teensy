@@ -127,7 +127,15 @@ p25 = interp1(mod_fit((amp_levels_volts(1):0.01:amp_levels_volts(end))'),(amp_le
 p50 = interp1(mod_fit((amp_levels_volts(1):0.01:amp_levels_volts(end))'),(amp_levels_volts(1):0.01:amp_levels_volts(end))', 0.5, 'linear');
 p75 = interp1(mod_fit((amp_levels_volts(1):0.01:amp_levels_volts(end))'),(amp_levels_volts(1):0.01:amp_levels_volts(end))', 0.75, 'linear');
 plot((amp_levels_volts(1):0.01:amp_levels_volts(end))',mod_fit((amp_levels_volts(1):0.01:amp_levels_volts(end))'),'m')
-line([p25 p25],[0.25 0.25],'Color',[1 1 0])
+xlm = xlim;
+ylm = ylim;
+line([p25 p25],[ylm(1) 0.25],'Color',[1 1 0])
+line([p50 p50],[ylm(1) 0.5],'Color',[1 0.5 0])
+line([p75 p75],[ylm(1) 0.75],'Color',[1 0 0])
+
+line([xlm(1) p25],[0.25 0.25],'Color',[1 1 0])
+line([xlm(1) p50],[0.5 0.5],'Color',[1 0.5 0])
+line(xlim,[0.75 0.75],'Color',[1 0 0])
 if verbose
 
     t = data.LoopNum/Fs;

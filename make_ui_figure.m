@@ -509,7 +509,7 @@ axb.Title.String = 'Performance';
 
 axb.YTick = [1 2 3 4];
 axb.YTickLabel = {'Hits','Misses','CWs','FAs'};
-bh = barh(axb,[1 2 3 4],[1 2 3 4]);
+bh = barh(axb,[1 2 3 4],[0 0 0 0]);
 bh.EdgeColor = 'none';
 bh.FaceColor = 'flat';
 bh.CData = ([3, 252, 107; 252, 206, 3; 3, 240, 252; 252, 3, 74]./255)./3;
@@ -524,9 +524,9 @@ axc.YColor = [1 1 1];
 axc.XLabel.String = 'Stimulus Amplitude';
 axc.XTickLabelRotation = 90;
 axc.YLim = [0 1];
-axc.XLim = [0 6];
+axc.XLim = [0 params.trial.sig_amps(end)];
 axc.YLabel.String = 'P(hit)';
-plot(axc,[1 2 3 4 5],[0 0 0 0 0],'-sg'); % piezo signal
+plot(axc,params.trial.sig_amps,zeros(size(params.trial.sig_amps)),'-sg'); % piezo signal
 
 end
 

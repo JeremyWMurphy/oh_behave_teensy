@@ -9,8 +9,8 @@ baseln = 5; % length of pause at begining of each run, sec
 itis = [7 10]; % inter-trial interval, sec
 n_trials = 300; % number of total trials to run
 prcnt_go = 0.9; % percentage of trials that are go trials
-sig_amps = [0.25 0.6 0.75 2 3]; % amplitudes of stimuli, Volts
-prcnt_amps = [0.2 0.2 0.2 0.2 0.2]; % proportion of different amplitudes to present - needs to add to 1
+sig_amps = [0.1 0.15 0.2 0.5 0.7 1]; % amplitudes of stimuli, Volts
+prcnt_amps = [0.16 0.16 0.16 0.16 0.16 0.16]; % proportion of different amplitudes to present - needs to add to 1
 lick_pause_time = 1000; % pause in ms for lick-reward pairing between lick and reward, this is usually fixed during detection, but may be used for other shaping runs
 
 % initial teensy waveform stimulus parameters
@@ -134,10 +134,10 @@ while f.UserData.state ~= 3
         fprintf(data_fid_notes,['\nRun Began at ' char(datetime('now','Format','HH:mm:ss'))]);
 
         n_resp_types = [0 0 0 0]; % hits,misses,cws,fas
-        phit = zeros(2,numel(sig_amps));
+        p_hit = zeros(2,numel(sig_amps));
         axc.Children.XData = sig_amps;
-        axc.XLim = [0 sig_amps(end)];
         axc.XTick = sig_amps;
+        axc.XLim = [0 sig_amps(end)];
         
         while present % trial loop
 
@@ -237,11 +237,11 @@ while f.UserData.state ~= 3
             if f.UserData.trialOutcome == 1
                 hit_txt.FontColor = [0 1 1];
                 n_resp_types(1) = n_resp_types(1)+1;
-                p_hit(1,trial_type) = phit(1,trial_type) + 1;
+                p_hit(1,trial_type) = p_hit(1,trial_type) + 1;
             elseif f.UserData.trialOutcome == 2
                 miss_txt.FontColor = [0 1 1];
                 n_resp_types(2) = n_resp_types(2)+1;
-                p_hit(2,trial_type) = phit(2,trial_type) + 1;
+                p_hit(2,trial_type) = p_hit(2,trial_type) + 1;
             elseif f.UserData.trialOutcome == 3
                 cw_txt.FontColor = [0 1 1];
                 n_resp_types(3) = n_resp_types(3)+1;
@@ -285,9 +285,9 @@ while f.UserData.state ~= 3
 
             axb.Children.YData = n_resp_types;
             axb.Children.Labels = n_resp_types;
-            axb.XLim = [0 max(n_resp_types(:))];
+            axb.XLim = [0 max(n_resp_types(:))+0.1];
 
-            axc.Children.YData = phit(1,:)./(phit(1,:)+phit(2,:));
+            axc.Children.YData = p_hit(1,:)./(p_hit(1,:)+p_hit(2,:));
            
         end
     end
